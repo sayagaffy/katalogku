@@ -1,0 +1,766 @@
+# API SPECIFICATION - KATALOGKU
+
+## Base Information
+
+**Base URL:**
+- Development: `http://localhost:8000/api`
+- Production: `https://katalogku.id/api`
+
+**Content-Type:** `application/json` (except file uploads: `multipart/form-data`)
+
+**Authentication:** Bearer Token (Laravel Sanctum)
+```
+Authorization: Bearer {token}
+```
+
+**API Version:** v1 (no versioning in MVP, add later if breaking changes)
+
+---
+
+## Response Format Standards
+
+### Success Response
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Operation completed successfully"
+}
+```
+
+### Error Response
+```json
+{
+  "success": false,
+  "message": "Error description",
+  "errors": {
+    "field_name": ["Validation error message"]
+  }
+}
+```
+
+### Pagination Response
+```json
+{
+  "success": true,
+  "data": [ ... ],
+  "meta": {
+    "current_page": 1,
+    "last_page": 5,
+    "per_page": 20,
+    "total": 95
+  }
+}
+```
+
+---
+
+## Authentication Endpoints
+
+### 1. Send OTP
+
+**Purpose:** Send 6-digit OTP to WhatsApp number
+
+**Endpoint:** `POST /api/send-otp`
+
+**Public:** Yes (no auth required)
+
+**Request Body:**
+```json
+{
+  "whatsapp": "081234567890"
+}
+```
+
+**Validation:**
+- `whatsapp`: required, string, 10-13 digits, starts with "08" or "+628"
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "OTP terkirim ke WhatsApp",
+  "data": {
+    "expires_in": 300,
+    "can_resend_at": "2024-01-01T10:05:00Z"
+  }
+}
+```
+
+**Errors:**
+- `429` - Too many requests (max 3 per hour)
+- `500` - SMS service error
+
+**Rate Limit:** 3 requests per hour per `whatsapp`
+
+---
+
+### 2. Verify OTP & Register
+
+**Purpose:** Verify OTP and create new account
+
+**Endpoint:** `POST /api/verify-otp`
+
+**Public:** Yes
+
+**Request Body:**
+```json
+{
+  "whatsapp": "081234567890",
+  "otp": "123456",
+  "name": "Sarah Wijaya",
+  "password": "password123",
+  "password_confirmation": "password123"
+}
+```
+
+**Validation:**
+- `whatsapp`: required, exists in otp_codes
+- `otp`: required, 6 digits, valid & not expired
+- `name`: required, 3-100 chars
+- `password`: required, min 8 chars, confirmed
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Registrasi berhasil!",
+  "data": {
+    "user": {
+      "id": 1,
+      "name": "Sarah Wijaya",
+      "whatsapp": "081234567890",
+      "username": null
+    },
+    "token": "1|abc123xyz..."
+  }
+}
+```
+
+**Errors:**
+- `400` - OTP invalid or expired
+- `409` - WhatsApp already registered
+- `422` - Validation errors
+
+---
+
+### 3. Login
+
+**Purpose:** Login existing user
+
+**Endpoint:** `POST /api/login`
+
+**Public:** Yes
+
+**Request Body:**
+```json
+{
+  "whatsapp": "081234567890",
+  "password": "password123"
+}
+```
+
+**Validation:**
+- `whatsapp`: required
+- `password`: required
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Login berhasil!",
+  "data": {
+    "user": {
+      "id": 1,
+      "name": "Sarah Wijaya",
+      "whatsapp": "081234567890",
+      "username": "bajusarah",
+      "catalog": {
+        "id": 1,
+        "name": "Toko Baju Sarah",
+        "username": "bajusarah"
+      }
+    },
+    "token": "1|xyz789abc..."
+  }
+}
+```
+
+**Errors:**
+- `401` - Invalid credentials
+- `422` - Validation errors
+
+---
+
+### 4. Logout
+
+**Purpose:** Revoke current token
+
+**Endpoint:** `POST /api/logout`
+
+**Auth:** Required
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Logout berhasil"
+}
+```
+
+---
+
+### 5. Get Current User
+
+**Purpose:** Get authenticated user info
+
+**Endpoint:** `GET /api/user`
+
+**Auth:** Required
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "Sarah Wijaya",
+    "whatsapp": "081234567890",
+    "username": "bajusarah",
+    "avatar": "/storage/avatars/1.jpg",
+    "verified_at": "2024-01-01T10:00:00Z",
+    "created_at": "2024-01-01T10:00:00Z"
+  }
+}
+```
+
+---
+
+### 6. Check Username Availability
+
+**Purpose:** Real-time check if username is available
+
+**Endpoint:** `GET /api/check-username?username={value}`
+
+**Public:** Yes
+
+**Query Params:**
+- `username`: required, 3-50 chars, alphanumeric + underscore/dash
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "available": true,
+    "username": "bajusarah"
+  }
+}
+```
+
+**If taken:**
+```json
+{
+  "success": true,
+  "data": {
+    "available": false,
+    "username": "bajusarah",
+    "suggestions": ["bajusarah2", "bajusarah_shop", "bajusarahofficial"]
+  }
+}
+```
+
+---
+
+## Catalog Endpoints
+
+### 7. Get My Catalog
+
+**Purpose:** Get authenticated user's catalog
+
+**Endpoint:** `GET /api/catalog`
+
+**Auth:** Required
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "Toko Baju Sarah",
+    "username": "bajusarah",
+    "description": "Fashion wanita trendy",
+    "category": "fashion",
+    "whatsapp": "081234567890",
+    "avatar": null,
+    "is_published": true,
+    "public_url": "https://katalogku.id/bajusarah",
+    "product_count": 15,
+    "created_at": "2024-01-01T10:00:00Z"
+  }
+}
+```
+
+**If no catalog exists:**
+```json
+{
+  "success": true,
+  "data": null,
+  "message": "Belum ada katalog. Buat sekarang!"
+}
+```
+
+---
+
+### 8. Create/Update Catalog
+
+**Purpose:** Create new catalog or update existing
+
+**Endpoint:** `POST /api/catalog`
+
+**Auth:** Required
+
+**Request Body:**
+```json
+{
+  "name": "Toko Baju Sarah",
+  "username": "bajusarah",
+  "description": "Fashion wanita trendy & affordable",
+  "category": "fashion",
+  "whatsapp": "081234567890"
+}
+```
+
+**Validation:**
+- `name`: required, 3-100 chars
+- `username`: required, 3-50 chars, unique, alphanumeric + underscore/dash
+- `description`: optional, max 500 chars
+- `category`: optional, in predefined list
+- `whatsapp`: optional, valid phone number
+
+**Response (201 or 200):**
+```json
+{
+  "success": true,
+  "message": "Katalog berhasil dibuat!",
+  "data": {
+    "id": 1,
+    "name": "Toko Baju Sarah",
+    "username": "bajusarah",
+    "public_url": "https://katalogku.id/bajusarah"
+  }
+}
+```
+
+**Errors:**
+- `409` - Username already taken
+- `422` - Validation errors
+
+---
+
+### 9. Get Public Catalog
+
+**Purpose:** Get public catalog view (for customers)
+
+**Endpoint:** `GET /api/public/{username}`
+
+**Public:** Yes
+
+**Query Params:**
+- `category`: optional, filter by category
+
+**Example:** `GET /api/public/bajusarah?category=fashion`
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "catalog": {
+      "name": "Toko Baju Sarah",
+      "username": "bajusarah",
+      "description": "Fashion wanita trendy",
+      "category": "fashion",
+      "whatsapp": "081234567890",
+      "avatar": null
+    },
+    "products": [
+      {
+        "id": 1,
+        "category": "fashion",
+        "name": "Kemeja Flanel Premium",
+        "price": 85000,
+        "image_webp": "/storage/products/1.webp",
+        "image_jpg": "/storage/products/1.jpg",
+        "description": "Bahan katun premium",
+        "in_stock": true,
+        "whatsapp_link": "https://wa.me/6281234567890?text=Halo%20kak..."
+      }
+    ],
+    "categories": [
+      { "name": "semua", "count": 15 },
+      { "name": "fashion", "count": 10 },
+      { "name": "aksesoris", "count": 5 }
+    ]
+  }
+}
+```
+
+**Errors:**
+- `404` - Catalog not found
+
+---
+
+## Product Endpoints
+
+### 10. Get My Products
+
+**Purpose:** Get all products for authenticated user's catalog
+
+**Endpoint:** `GET /api/products`
+
+**Auth:** Required
+
+**Query Params:**
+- `category`: optional, filter by category
+- `search`: optional, search in name/description
+- `per_page`: optional, default 20
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "category": "fashion",
+      "name": "Kemeja Flanel Premium",
+      "price": 85000,
+      "image_webp": "/storage/products/1.webp",
+      "image_jpg": "/storage/products/1.jpg",
+      "description": "Bahan katun premium",
+      "in_stock": true,
+      "sort_order": 1,
+      "click_count": 25,
+      "created_at": "2024-01-01T10:00:00Z"
+    }
+  ],
+  "meta": {
+    "total": 15,
+    "per_page": 20,
+    "current_page": 1
+  }
+}
+```
+
+---
+
+### 11. Create Product
+
+**Purpose:** Add new product with image upload
+
+**Endpoint:** `POST /api/products`
+
+**Auth:** Required
+
+**Content-Type:** `multipart/form-data`
+
+**Request Body:**
+```
+image: File (max 10MB)
+name: "Kemeja Flanel Premium"
+category: "fashion"
+price: 85000
+description: "Bahan katun premium, adem & nyaman"
+in_stock: true (optional, default true)
+external_link: "https://shopee.co.id/..." (optional)
+```
+
+**Validation:**
+- `image`: required, max 10MB, mimes:jpg,jpeg,png,webp
+- `name`: required, 3-200 chars
+- `category`: required, in predefined list
+- `price`: required, numeric, min:0
+- `description`: optional, max:1000 chars
+- `in_stock`: optional, boolean
+- `external_link`: optional, url
+
+**Processing:**
+1. Validate file
+2. Resize to 1000x1000px (maintain aspect ratio)
+3. Compress to WebP 80% + JPG 85%
+4. Save to storage
+5. Create product record
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Produk berhasil ditambahkan!",
+  "data": {
+    "id": 1,
+    "name": "Kemeja Flanel Premium",
+    "price": 85000,
+    "image_webp": "/storage/products/1.webp",
+    "image_jpg": "/storage/products/1.jpg",
+    "category": "fashion",
+    "in_stock": true
+  }
+}
+```
+
+**Errors:**
+- `422` - Validation errors (file too large, invalid format, etc)
+- `403` - Reached product limit (50 for FREE tier)
+- `500` - Image processing failed
+
+---
+
+### 12. Update Product
+
+**Purpose:** Update existing product (with or without image)
+
+**Endpoint:** `PATCH /api/products/{id}`
+
+**Auth:** Required (must own product)
+
+**Content-Type:** `multipart/form-data` (if uploading image) or `application/json`
+
+**Request Body:**
+```json
+{
+  "name": "Kemeja Flanel Premium Updated",
+  "price": 90000,
+  "description": "Updated description",
+  "category": "fashion",
+  "in_stock": true
+}
+```
+
+**If updating image:**
+```
+image: File
+... (other fields)
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Produk berhasil diupdate!",
+  "data": { ... }
+}
+```
+
+**Errors:**
+- `403` - Not authorized
+- `404` - Product not found
+- `422` - Validation errors
+
+---
+
+### 13. Delete Product
+
+**Purpose:** Delete product and its images
+
+**Endpoint:** `DELETE /api/products/{id}`
+
+**Auth:** Required (must own product)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Produk berhasil dihapus!"
+}
+```
+
+**Errors:**
+- `403` - Not authorized
+- `404` - Product not found
+
+---
+
+### 14. Reorder Products
+
+**Purpose:** Update sort order of products
+
+**Endpoint:** `POST /api/products/reorder`
+
+**Auth:** Required
+
+**Request Body:**
+```json
+{
+  "orders": [
+    { "id": 3, "sort_order": 1 },
+    { "id": 1, "sort_order": 2 },
+    { "id": 2, "sort_order": 3 }
+  ]
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Urutan produk berhasil diupdate!"
+}
+```
+
+---
+
+## Analytics Endpoints
+
+### 15. Get Analytics Overview
+
+**Purpose:** Get dashboard analytics summary
+
+**Endpoint:** `GET /api/analytics/overview`
+
+**Auth:** Required
+
+**Query Params:**
+- `period`: optional, values: "7days", "30days", "all" (default: "7days")
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "period": "7days",
+    "total_clicks": 125,
+    "total_views": 450,
+    "top_products": [
+      {
+        "id": 1,
+        "name": "Kemeja Flanel Premium",
+        "click_count": 45,
+        "percentage": 36.0
+      },
+      {
+        "id": 2,
+        "name": "Dress Korea Style",
+        "click_count": 30,
+        "percentage": 24.0
+      }
+    ],
+    "clicks_by_date": [
+      { "date": "2024-01-01", "count": 15 },
+      { "date": "2024-01-02", "count": 20 }
+    ],
+    "clicks_by_category": [
+      { "category": "fashion", "count": 80 },
+      { "category": "aksesoris", "count": 45 }
+    ]
+  }
+}
+```
+
+---
+
+### 16. Track Click (Public)
+
+**Purpose:** Track when customer clicks "Order" button
+
+**Endpoint:** `POST /api/clicks`
+
+**Public:** Yes (no auth required)
+
+**Request Body:**
+```json
+{
+  "product_id": 1,
+  "referrer": "instagram"
+}
+```
+
+**Validation:**
+- `product_id`: required, exists
+- `referrer`: optional, string
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Click tracked"
+}
+```
+
+**Note:** This is async, should not block user's WhatsApp redirect
+
+---
+
+## Error Codes Summary
+
+| Code | Meaning | Example |
+|------|---------|---------|
+| 200 | OK | Successful GET/PATCH/DELETE |
+| 201 | Created | Resource created successfully |
+| 400 | Bad Request | Invalid OTP |
+| 401 | Unauthorized | Invalid credentials |
+| 403 | Forbidden | Not allowed to access resource |
+| 404 | Not Found | Resource doesn't exist |
+| 409 | Conflict | Username/WhatsApp already taken |
+| 422 | Validation Error | Form validation failed |
+| 429 | Too Many Requests | Rate limit exceeded |
+| 500 | Server Error | Internal error |
+
+---
+
+## Rate Limiting
+
+**Global:**
+- Authenticated requests: 60 per minute per user
+- Public requests: 120 per minute per IP
+
+**Specific:**
+- `/api/send-otp`: 3 per hour per `whatsapp`
+- `/api/verify-otp`: 10 per hour per IP
+- `/api/clicks`: 300 per minute per IP
+
+**Headers:**
+```
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 59
+X-RateLimit-Reset: 1609459200
+```
+
+---
+
+## Testing Examples
+
+### cURL - Send OTP
+```bash
+curl -X POST https://katalogku.id/api/send-otp \
+  -H "Content-Type: application/json" \
+  -d '{"whatsapp":"081234567890"}'
+```
+
+### cURL - Create Product
+```bash
+curl -X POST https://katalogku.id/api/products \
+  -H "Authorization: Bearer {token}" \
+  -F "image=@product.jpg" \
+  -F "name=Kemeja Flanel" \
+  -F "category=fashion" \
+  -F "price=85000"
+```
+
+### JavaScript - Login
+```javascript
+const response = await fetch('https://katalogku.id/api/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    whatsapp: '081234567890',
+    password: 'password123'
+  })
+});
+const data = await response.json();
+```
+
+---
+
+This API specification covers all MVP endpoints. Extend as needed for PRO/PREMIUM features.

@@ -1,0 +1,755 @@
+# FRONTEND ARCHITECTURE - KATALOGKU
+
+## Technology Stack
+
+**Framework:** Vue.js 3.4+ (Composition API)  
+**Build Tool:** Vite 5+  
+**Styling:** Tailwind CSS 3.4+  
+**State Management:** Pinia  
+**Routing:** Vue Router 4+  
+**HTTP Client:** Axios  
+**Form Validation:** VeeValidate (optional, can use native)  
+**Icons:** Lucide Icons or Heroicons
+
+---
+
+## Project Structure
+
+```
+src/
+├── main.js                 # App entry point
+├── App.vue                 # Root component
+│
+├── pages/                  # Route components (full pages)
+│   ├── HomePage.vue
+│   ├── auth/
+│   │   ├── LoginPage.vue
+│   │   └── RegisterPage.vue
+│   ├── dashboard/
+│   │   ├── DashboardPage.vue
+│   │   ├── ProductsPage.vue
+│   │   └── AnalyticsPage.vue
+│   ├── onboarding/
+│   │   └── SetupCatalogPage.vue
+│   └── PublicCatalogPage.vue
+│
+├── components/             # Reusable components
+│   ├── layout/
+│   │   ├── AppHeader.vue
+│   │   ├── AppSidebar.vue
+│   │   └── AppFooter.vue
+│   ├── auth/
+│   │   ├── OTPInput.vue
+│   │   └── WhatsAppInput.vue
+│   ├── products/
+│   │   ├── ProductCard.vue
+│   │   ├── ProductForm.vue
+│   │   ├── ProductList.vue
+│   │   └── ImageUpload.vue
+│   ├── catalog/
+│   │   ├── CategoryFilter.vue
+│   │   ├── CatalogPreview.vue
+│   │   └── ShareButton.vue
+│   ├── analytics/
+│   │   ├── StatsCard.vue
+│   │   └── ClicksChart.vue
+│   └── common/
+│       ├── Button.vue
+│       ├── Input.vue
+│       ├── Modal.vue
+│       ├── Toast.vue
+│       └── LoadingSpinner.vue
+│
+├── stores/                 # Pinia stores
+│   ├── auth.js
+│   ├── catalog.js
+│   ├── products.js
+│   └── analytics.js
+│
+├── composables/            # Reusable composition functions
+│   ├── useImageUpload.js
+│   ├── useOTP.js
+│   ├── useToast.js
+│   └── useCopyToClipboard.js
+│
+├── services/               # API calls
+│   ├── api.js              # Axios instance
+│   ├── auth.service.js
+│   ├── catalog.service.js
+│   ├── product.service.js
+│   └── analytics.service.js
+│
+├── router/                 # Route definitions
+│   └── index.js
+│
+├── utils/                  # Helper functions
+│   ├── formatters.js       # Currency, date formatters
+│   ├── validators.js       # Form validation rules
+│   └── constants.js        # App constants
+│
+└── assets/                 # Static assets
+    ├── styles/
+    │   └── main.css
+    ├── images/
+    └── fonts/
+```
+
+---
+
+## Routing Strategy
+
+### Route Configuration
+
+```javascript
+// router/index.js
+import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const routes = [
+  {
+    path: '/',
+    name: 'home',
+    component: () => import('@/pages/HomePage.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/pages/auth/LoginPage.vue'),
+    meta: { requiresGuest: true }
+  },
+  {
+    path: '/register',
+    name: 'register',
+    component: () => import('@/pages/auth/RegisterPage.vue'),
+    meta: { requiresGuest: true }
+  },
+  {
+    path: '/dashboard',
+    name: 'dashboard',
+    component: () => import('@/pages/dashboard/DashboardPage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/products',
+    name: 'products',
+    component: () => import('@/pages/dashboard/ProductsPage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/analytics',
+    name: 'analytics',
+    component: () => import('@/pages/dashboard/AnalyticsPage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/setup',
+    name: 'setup',
+    component: () => import('@/pages/onboarding/SetupCatalogPage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/:username',
+    name: 'public-catalog',
+    component: () => import('@/pages/PublicCatalogPage.vue'),
+    meta: { requiresAuth: false }
+  }
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+})
+
+// Navigation guards
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
+  
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    next({ name: 'login' })
+  } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
+    next({ name: 'dashboard' })
+  } else {
+    next()
+  }
+})
+
+export default router
+```
+
+---
+
+## State Management (Pinia)
+
+### Auth Store
+
+```javascript
+// stores/auth.js
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import AuthService from '@/services/auth.service'
+
+export const useAuthStore = defineStore('auth', () => {
+  // State
+  const user = ref(null)
+  const token = ref(localStorage.getItem('token') || null)
+  
+  // Getters
+  const isAuthenticated = computed(() => !!token.value)
+  const hasCompletedSetup = computed(() => user.value?.username !== null)
+  
+  // Actions
+  async function sendOTP(whatsapp) {
+    const response = await AuthService.sendOTP(whatsapp)
+    return response.data
+  }
+  
+  async function verifyOTP(credentials) {
+    const response = await AuthService.verifyOTP(credentials)
+    token.value = response.data.token
+    user.value = response.data.user
+    localStorage.setItem('token', token.value)
+    return response.data
+  }
+  
+  async function login(credentials) {
+    const response = await AuthService.login(credentials)
+    token.value = response.data.token
+    user.value = response.data.user
+    localStorage.setItem('token', token.value)
+    return response.data
+  }
+  
+  async function logout() {
+    await AuthService.logout()
+    token.value = null
+    user.value = null
+    localStorage.removeItem('token')
+  }
+  
+  async function fetchUser() {
+    const response = await AuthService.getUser()
+    user.value = response.data
+  }
+  
+  return {
+    user,
+    token,
+    isAuthenticated,
+    hasCompletedSetup,
+    sendOTP,
+    verifyOTP,
+    login,
+    logout,
+    fetchUser
+  }
+})
+```
+
+### Products Store
+
+```javascript
+// stores/products.js
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import ProductService from '@/services/product.service'
+
+export const useProductStore = defineStore('products', () => {
+  const products = ref([])
+  const loading = ref(false)
+  const selectedCategory = ref('all')
+  
+  async function fetchProducts(params = {}) {
+    loading.value = true
+    try {
+      const response = await ProductService.getAll(params)
+      products.value = response.data
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  async function createProduct(formData) {
+    const response = await ProductService.create(formData)
+    products.value.unshift(response.data)
+    return response.data
+  }
+  
+  async function updateProduct(id, formData) {
+    const response = await ProductService.update(id, formData)
+    const index = products.value.findIndex(p => p.id === id)
+    if (index !== -1) {
+      products.value[index] = response.data
+    }
+    return response.data
+  }
+  
+  async function deleteProduct(id) {
+    await ProductService.delete(id)
+    products.value = products.value.filter(p => p.id !== id)
+  }
+  
+  return {
+    products,
+    loading,
+    selectedCategory,
+    fetchProducts,
+    createProduct,
+    updateProduct,
+    deleteProduct
+  }
+})
+```
+
+---
+
+## API Service Layer
+
+### Base Axios Instance
+
+```javascript
+// services/api.js
+import axios from 'axios'
+import router from '@/router'
+
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  }
+})
+
+// Request interceptor
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => Promise.reject(error)
+)
+
+// Response interceptor
+api.interceptors.response.use(
+  (response) => response.data,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token')
+      router.push({ name: 'login' })
+    }
+    return Promise.reject(error)
+  }
+)
+
+export default api
+```
+
+### Product Service
+
+```javascript
+// services/product.service.js
+import api from './api'
+
+export default {
+  getAll(params) {
+    return api.get('/products', { params })
+  },
+  
+  create(formData) {
+    return api.post('/products', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  
+  update(id, formData) {
+    return api.patch(`/products/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  
+  delete(id) {
+    return api.delete(`/products/${id}`)
+  },
+  
+  reorder(orders) {
+    return api.post('/products/reorder', { orders })
+  }
+}
+```
+
+---
+
+## Key Components
+
+### OTPInput Component
+
+```vue
+<script setup>
+import { ref, nextTick } from 'vue'
+
+const emit = defineEmits(['complete'])
+
+const inputs = ref([])
+const otp = ref(['', '', '', '', '', ''])
+
+const handleInput = (index, event) => {
+  const value = event.target.value
+  
+  if (value.length === 1 && index < 5) {
+    nextTick(() => inputs.value[index + 1]?.focus())
+  }
+  
+  if (otp.value.every(digit => digit.length === 1)) {
+    emit('complete', otp.value.join(''))
+  }
+}
+
+const handleKeydown = (index, event) => {
+  if (event.key === 'Backspace' && !otp.value[index] && index > 0) {
+    nextTick(() => inputs.value[index - 1]?.focus())
+  }
+}
+
+const handlePaste = (event) => {
+  event.preventDefault()
+  const pastedData = event.clipboardData.getData('text').slice(0, 6)
+  otp.value = pastedData.split('').concat(Array(6 - pastedData.length).fill(''))
+  
+  if (pastedData.length === 6) {
+    emit('complete', pastedData)
+  }
+}
+</script>
+
+<template>
+  <div class="flex gap-2 justify-center">
+    <input
+      v-for="(digit, index) in otp"
+      :key="index"
+      ref="inputs"
+      v-model="otp[index]"
+      type="text"
+      inputmode="numeric"
+      maxlength="1"
+      class="w-12 h-12 text-center text-2xl border-2 rounded-lg focus:border-blue-500"
+      @input="handleInput(index, $event)"
+      @keydown="handleKeydown(index, $event)"
+      @paste="index === 0 ? handlePaste($event) : null"
+    />
+  </div>
+</template>
+```
+
+### ImageUpload Component
+
+```vue
+<script setup>
+import { ref, computed } from 'vue'
+
+const props = defineProps({
+  modelValue: File,
+  maxSize: { type: Number, default: 10 * 1024 * 1024 } // 10MB
+})
+
+const emit = defineEmits(['update:modelValue'])
+
+const file = ref(null)
+const preview = ref(null)
+const dragover = ref(false)
+const error = ref(null)
+
+const fileSize = computed(() => {
+  if (!file.value) return null
+  const sizeInMB = (file.value.size / (1024 * 1024)).toFixed(2)
+  return `${sizeInMB} MB`
+})
+
+const handleFileChange = (event) => {
+  const selectedFile = event.target.files[0]
+  validateAndSetFile(selectedFile)
+}
+
+const handleDrop = (event) => {
+  dragover.value = false
+  const selectedFile = event.dataTransfer.files[0]
+  validateAndSetFile(selectedFile)
+}
+
+const validateAndSetFile = (selectedFile) => {
+  error.value = null
+  
+  if (!selectedFile) return
+  
+  // Validate type
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(selectedFile.type)) {
+    error.value = 'Format file harus JPG, PNG, atau WebP'
+    return
+  }
+  
+  // Validate size
+  if (selectedFile.size > props.maxSize) {
+    error.value = `Ukuran file maksimal ${(props.maxSize / (1024 * 1024))} MB`
+    return
+  }
+  
+  file.value = selectedFile
+  emit('update:modelValue', selectedFile)
+  
+  // Create preview
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    preview.value = e.target.result
+  }
+  reader.readAsDataURL(selectedFile)
+}
+
+const removeFile = () => {
+  file.value = null
+  preview.value = null
+  error.value = null
+  emit('update:modelValue', null)
+}
+</script>
+
+<template>
+  <div class="space-y-4">
+    <div
+      v-if="!preview"
+      class="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer"
+      :class="dragover ? 'border-blue-500 bg-blue-50' : 'border-gray-300'"
+      @click="$refs.fileInput.click()"
+      @dragover.prevent="dragover = true"
+      @dragleave="dragover = false"
+      @drop.prevent="handleDrop"
+    >
+      <div class="text-gray-600">
+        <svg class="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <p class="font-medium">Klik atau drag & drop foto</p>
+        <p class="text-sm text-gray-500 mt-1">Max 10MB, JPG/PNG/WebP</p>
+      </div>
+      <input
+        ref="fileInput"
+        type="file"
+        class="hidden"
+        accept="image/jpeg,image/png,image/webp"
+        @change="handleFileChange"
+      />
+    </div>
+    
+    <div v-else class="relative">
+      <img :src="preview" class="rounded-lg max-h-64 mx-auto" />
+      <button
+        type="button"
+        class="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full"
+        @click="removeFile"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <p v-if="fileSize" class="text-sm text-gray-500 text-center mt-2">{{ fileSize }}</p>
+    </div>
+    
+    <p v-if="error" class="text-red-500 text-sm">{{ error }}</p>
+  </div>
+</template>
+```
+
+---
+
+## Composables
+
+### useImageUpload
+
+```javascript
+// composables/useImageUpload.js
+import { ref } from 'vue'
+
+export function useImageUpload(options = {}) {
+  const { maxSize = 10 * 1024 * 1024 } = options
+  
+  const file = ref(null)
+  const preview = ref(null)
+  const uploading = ref(false)
+  const progress = ref(0)
+  const error = ref(null)
+  
+  const setFile = (selectedFile) => {
+    error.value = null
+    
+    if (!selectedFile) {
+      file.value = null
+      preview.value = null
+      return
+    }
+    
+    // Validate
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(selectedFile.type)) {
+      error.value = 'Format harus JPG/PNG/WebP'
+      return false
+    }
+    
+    if (selectedFile.size > maxSize) {
+      error.value = `Max ${(maxSize / (1024 * 1024))} MB`
+      return false
+    }
+    
+    file.value = selectedFile
+    
+    // Preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      preview.value = e.target.result
+    }
+    reader.readAsDataURL(selectedFile)
+    
+    return true
+  }
+  
+  const reset = () => {
+    file.value = null
+    preview.value = null
+    error.value = null
+    progress.value = 0
+  }
+  
+  return {
+    file,
+    preview,
+    uploading,
+    progress,
+    error,
+    setFile,
+    reset
+  }
+}
+```
+
+---
+
+## Utilities
+
+### Formatters
+
+```javascript
+// utils/formatters.js
+export const formatCurrency = (value) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0
+  }).format(value)
+}
+
+export const formatDate = (date) => {
+  return new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).format(new Date(date))
+}
+
+export const formatRelativeTime = (date) => {
+  const now = new Date()
+  const then = new Date(date)
+  const diffMs = now - then
+  const diffMins = Math.floor(diffMs / 60000)
+  
+  if (diffMins < 1) return 'Baru saja'
+  if (diffMins < 60) return `${diffMins} menit lalu`
+  
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours} jam lalu`
+  
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays < 7) return `${diffDays} hari lalu`
+  
+  return formatDate(date)
+}
+```
+
+---
+
+## Styling with Tailwind
+
+### Configuration
+
+```javascript
+// tailwind.config.js
+export default {
+  content: [
+    './index.html',
+    './src/**/*.{vue,js,ts,jsx,tsx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        primary: '#10B981', // Green
+        secondary: '#3B82F6', // Blue
+        accent: '#F59E0B' // Orange
+      }
+    },
+  },
+  plugins: [],
+}
+```
+
+### Mobile-First Responsive Classes
+
+```vue
+<!-- Example: Responsive Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  <!-- Mobile: 1 column, Tablet: 2 columns, Desktop: 3 columns -->
+</div>
+
+<!-- Example: Responsive Text -->
+<h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold">
+  <!-- Mobile: 2xl, Tablet: 3xl, Desktop: 4xl -->
+</h1>
+
+<!-- Example: Responsive Padding -->
+<div class="p-4 sm:p-6 lg:p-8">
+  <!-- Mobile: 1rem, Tablet: 1.5rem, Desktop: 2rem -->
+</div>
+```
+
+---
+
+## Performance Optimization
+
+### Lazy Loading
+
+```javascript
+// Lazy load route components
+const DashboardPage = () => import('@/pages/dashboard/DashboardPage.vue')
+
+// Lazy load images
+<img loading="lazy" :src="product.image" />
+```
+
+### Code Splitting
+
+```javascript
+// Split vendor chunks in vite.config.js
+export default {
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor': ['vue', 'vue-router', 'pinia'],
+          'ui': ['@headlessui/vue']
+        }
+      }
+    }
+  }
+}
+```
+
+---
+
+This frontend architecture provides a solid foundation for building KatalogKu with maintainable, scalable Vue 3 code.

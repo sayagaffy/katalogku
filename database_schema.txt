@@ -1,0 +1,462 @@
+# DATABASE SCHEMA - KATALOGKU
+
+## Overview
+
+This document defines the complete database structure for KatalogKu MVP.
+
+**Database:** MySQL 8.0  
+**Character Set:** utf8mb4 (emoji support)  
+**Collation:** utf8mb4_unicode_ci  
+**Engine:** InnoDB (all tables)
+
+---
+
+## Entity Relationship Diagram
+
+```
+┌─────────────┐       ┌──────────────┐       ┌──────────────┐
+│    users    │──1:1──│   catalogs   │──1:N──│   products   │
+└─────────────┘       └──────────────┘       └──────┬───────┘
+                                                     │
+                                                    1:N
+                                                     │
+                                              ┌──────▼───────┐
+                                              │    clicks    │
+                                              └──────────────┘
+
+┌─────────────┐
+│  otp_codes  │  (Temporary verification data)
+└─────────────┘
+
+┌─────────────────┐
+│ subscriptions   │  (Future: payment tracking)
+└─────────────────┘
+```
+
+**Relationships:**
+- User `hasOne` Catalog (MVP: single catalog per user)
+- Catalog `hasMany` Products
+- Product `hasMany` Clicks
+- User `hasOne` Subscription (future)
+
+---
+
+## Table Definitions
+
+### 1. users
+
+**Purpose:** Store user accounts and authentication data
+
+```sql
+CREATE TABLE users (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    whatsapp VARCHAR(20) NOT NULL UNIQUE COMMENT 'Format: 081234567890',
+    username VARCHAR(50) NOT NULL UNIQUE COMMENT 'For catalog URL',
+    password VARCHAR(255) NOT NULL COMMENT 'Bcrypt hashed',
+    avatar VARCHAR(255) NULL COMMENT 'Profile picture URL',
+    verified_at TIMESTAMP NULL COMMENT 'OTP verification timestamp',
+    remember_token VARCHAR(100) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_whatsapp (whatsapp),
+    INDEX idx_username (username),
+    INDEX idx_verified (verified_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**Indexes:**
+- `PRIMARY KEY` on `id` (auto)
+- `UNIQUE` on `whatsapp` (login identifier)
+- `UNIQUE` on `username` (public catalog URL)
+- `INDEX` on `verified_at` (filter active users)
+
+**Sample Data:**
+```sql
+INSERT INTO users (name, whatsapp, username, password, verified_at) VALUES
+('Sarah Wijaya', '081234567890', 'bajusarah', '$2y$10$...', NOW()),
+('Budi Santoso', '081234567891', 'budireseller', '$2y$10$...', NOW());
+```
+
+---
+
+### 2. otp_codes
+
+**Purpose:** Store temporary OTP codes for phone verification
+
+```sql
+CREATE TABLE otp_codes (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    whatsapp VARCHAR(20) NOT NULL COMMENT 'Target phone number',
+    code VARCHAR(6) NOT NULL COMMENT '6-digit OTP',
+    expires_at TIMESTAMP NOT NULL COMMENT '5 minutes from created',
+    verified_at TIMESTAMP NULL COMMENT 'NULL = not used yet',
+    ip_address VARCHAR(45) NULL COMMENT 'Request origin IP',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    INDEX idx_whatsapp_expires (whatsapp, expires_at),
+    INDEX idx_code (code),
+    INDEX idx_cleanup (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**Indexes:**
+- `PRIMARY KEY` on `id`
+- `COMPOSITE` on `(whatsapp, expires_at)` (lookup active OTPs)
+- `INDEX` on `expires_at` (cleanup expired codes)
+
+**Logic:**
+- OTP expires in 5 minutes
+- Rate limit: 3 requests per hour per `whatsapp`
+- After verification, set `verified_at` (prevents reuse)
+- Cleanup: Delete codes older than 24 hours (cron job)
+
+**Sample Data:**
+```sql
+INSERT INTO otp_codes (whatsapp, code, expires_at) VALUES
+('081234567890', '123456', DATE_ADD(NOW(), INTERVAL 5 MINUTE));
+```
+
+---
+
+### 3. catalogs
+
+**Purpose:** Store seller's catalog information
+
+```sql
+CREATE TABLE catalogs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    name VARCHAR(100) NOT NULL COMMENT 'Display name: Toko Baju Sarah',
+    username VARCHAR(50) NOT NULL UNIQUE COMMENT 'URL slug: bajusarah',
+    description TEXT NULL COMMENT 'About the store',
+    category VARCHAR(50) NULL COMMENT 'Primary category',
+    whatsapp VARCHAR(20) NULL COMMENT 'Contact WhatsApp (override user)',
+    avatar VARCHAR(255) NULL COMMENT 'Store logo/avatar',
+    theme VARCHAR(20) DEFAULT 'default' COMMENT 'Color theme (future)',
+    is_published BOOLEAN DEFAULT TRUE COMMENT 'Public visibility',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_username (username),
+    INDEX idx_user (user_id),
+    INDEX idx_published (is_published)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**Indexes:**
+- `PRIMARY KEY` on `id`
+- `UNIQUE` on `username` (public URL must be unique)
+- `FOREIGN KEY` on `user_id` (cascade delete if user deleted)
+- `INDEX` on `is_published` (filter active catalogs)
+
+**Constraints:**
+- `username` must match user's `username` (enforced in application)
+- `whatsapp` defaults to user's WhatsApp if NULL
+
+**Sample Data:**
+```sql
+INSERT INTO catalogs (user_id, name, username, description, category) VALUES
+(1, 'Toko Baju Sarah', 'bajusarah', 'Fashion wanita trendy & affordable', 'fashion'),
+(2, 'Toko Serba Ada Budi', 'budireseller', 'Elektronik & Fashion Terpercaya', NULL);
+```
+
+---
+
+### 4. products
+
+**Purpose:** Store catalog products with images
+
+```sql
+CREATE TABLE products (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    catalog_id BIGINT UNSIGNED NOT NULL,
+    category VARCHAR(50) NOT NULL DEFAULT 'lainnya' COMMENT 'elektronik, fashion, makanan, etc',
+    name VARCHAR(200) NOT NULL COMMENT 'Product name',
+    slug VARCHAR(220) NULL COMMENT 'URL-friendly name (future)',
+    price DECIMAL(15,2) NOT NULL COMMENT 'Price in Rupiah',
+    image_webp VARCHAR(255) NOT NULL COMMENT 'Primary image (WebP format)',
+    image_jpg VARCHAR(255) NOT NULL COMMENT 'Fallback image (JPG format)',
+    description TEXT NULL COMMENT 'Product description',
+    external_link VARCHAR(500) NULL COMMENT 'Link to Shopee/Tokopedia (optional)',
+    in_stock BOOLEAN DEFAULT TRUE COMMENT 'Stock availability',
+    sort_order INT DEFAULT 0 COMMENT 'Manual ordering within catalog',
+    view_count INT UNSIGNED DEFAULT 0 COMMENT 'Number of views (denormalized)',
+    click_count INT UNSIGNED DEFAULT 0 COMMENT 'Number of WhatsApp clicks (denormalized)',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (catalog_id) REFERENCES catalogs(id) ON DELETE CASCADE,
+    INDEX idx_catalog_category (catalog_id, category),
+    INDEX idx_catalog_sort (catalog_id, sort_order),
+    INDEX idx_stock (in_stock),
+    FULLTEXT KEY ft_name_desc (name, description)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**Indexes:**
+- `PRIMARY KEY` on `id`
+- `FOREIGN KEY` on `catalog_id` (cascade delete)
+- `COMPOSITE` on `(catalog_id, category)` (filter by category)
+- `COMPOSITE` on `(catalog_id, sort_order)` (display order)
+- `FULLTEXT` on `(name, description)` (search, future)
+
+**Categories:**
+Predefined list (enum in application):
+- `elektronik` - Electronics & gadgets
+- `fashion` - Clothing & accessories
+- `makanan` - Food & beverages
+- `kecantikan` - Beauty & cosmetics
+- `rumah_tangga` - Home & living
+- `lainnya` - Other
+
+**Image Storage:**
+- WebP: `/storage/products/{product_id}.webp`
+- JPG: `/storage/products/{product_id}.jpg`
+
+**Sample Data:**
+```sql
+INSERT INTO products (catalog_id, category, name, price, image_webp, image_jpg, description, in_stock, sort_order) VALUES
+(1, 'fashion', 'Kemeja Flanel Premium', 85000.00, 'products/1.webp', 'products/1.jpg', 'Bahan katun premium, adem & nyaman', TRUE, 1),
+(1, 'fashion', 'Dress Korea Style', 120000.00, 'products/2.webp', 'products/2.jpg', 'Dress cantik ala korea', TRUE, 2),
+(2, 'elektronik', 'Laptop Gaming Asus', 5000000.00, 'products/3.webp', 'products/3.jpg', 'RAM 16GB, RTX 3050', TRUE, 1);
+```
+
+---
+
+### 5. clicks
+
+**Purpose:** Track product clicks for analytics
+
+```sql
+CREATE TABLE clicks (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    product_id BIGINT UNSIGNED NOT NULL,
+    ip_address VARCHAR(45) NULL COMMENT 'Visitor IP (IPv4 or IPv6)',
+    user_agent TEXT NULL COMMENT 'Browser info',
+    referrer VARCHAR(500) NULL COMMENT 'Source URL (instagram, tiktok, etc)',
+    clicked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    INDEX idx_product_date (product_id, clicked_at),
+    INDEX idx_cleanup (clicked_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**Indexes:**
+- `PRIMARY KEY` on `id`
+- `FOREIGN KEY` on `product_id`
+- `COMPOSITE` on `(product_id, clicked_at)` (analytics queries)
+- `INDEX` on `clicked_at` (cleanup old data)
+
+**Analytics Queries:**
+```sql
+-- Total clicks last 7 days
+SELECT COUNT(*) FROM clicks 
+WHERE product_id = 1 
+AND clicked_at >= DATE_SUB(NOW(), INTERVAL 7 DAY);
+
+-- Top 5 products by clicks
+SELECT p.id, p.name, COUNT(c.id) as click_count
+FROM products p
+LEFT JOIN clicks c ON c.product_id = p.id
+WHERE p.catalog_id = 1
+AND c.clicked_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+GROUP BY p.id
+ORDER BY click_count DESC
+LIMIT 5;
+```
+
+**Data Retention:**
+- Keep clicks for 90 days
+- Archive or delete older data (cron job)
+
+---
+
+### 6. subscriptions (Future - Post-MVP)
+
+**Purpose:** Track user subscription tier and payment status
+
+```sql
+CREATE TABLE subscriptions (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    tier VARCHAR(20) NOT NULL DEFAULT 'free' COMMENT 'free, pro, premium',
+    status VARCHAR(20) NOT NULL DEFAULT 'active' COMMENT 'active, cancelled, expired',
+    started_at TIMESTAMP NOT NULL,
+    expires_at TIMESTAMP NULL COMMENT 'NULL = lifetime (free tier)',
+    cancelled_at TIMESTAMP NULL,
+    payment_method VARCHAR(50) NULL COMMENT 'manual, midtrans, etc',
+    last_payment_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_status (user_id, status),
+    INDEX idx_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**Tiers:**
+- `free` - 50 products, basic analytics, watermark
+- `pro` - Unlimited products, custom domain, advanced analytics (Rp 39K/mo)
+- `premium` - All PRO + reseller features, API access (Rp 99K/mo)
+
+**Status:**
+- `active` - Currently valid subscription
+- `cancelled` - User cancelled, expires at `expires_at`
+- `expired` - Past expiry date, downgrade to free
+
+---
+
+## Migration Strategy
+
+### Order of Creation
+
+1. `users` (no dependencies)
+2. `otp_codes` (no dependencies)
+3. `catalogs` (depends on users)
+4. `products` (depends on catalogs)
+5. `clicks` (depends on products)
+6. `subscriptions` (depends on users, future)
+
+### Laravel Migration Files
+
+```bash
+2024_01_01_000001_create_users_table.php
+2024_01_01_000002_create_otp_codes_table.php
+2024_01_01_000003_create_catalogs_table.php
+2024_01_01_000004_create_products_table.php
+2024_01_01_000005_create_clicks_table.php
+2024_01_01_000006_create_subscriptions_table.php  # Future
+```
+
+### Sample Migration (products)
+
+```php
+Schema::create('products', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('catalog_id')->constrained()->onDelete('cascade');
+    $table->string('category', 50)->default('lainnya');
+    $table->string('name', 200);
+    $table->string('slug', 220)->nullable();
+    $table->decimal('price', 15, 2);
+    $table->string('image_webp', 255);
+    $table->string('image_jpg', 255);
+    $table->text('description')->nullable();
+    $table->string('external_link', 500)->nullable();
+    $table->boolean('in_stock')->default(true);
+    $table->integer('sort_order')->default(0);
+    $table->unsignedInteger('view_count')->default(0);
+    $table->unsignedInteger('click_count')->default(0);
+    $table->timestamps();
+    
+    $table->index(['catalog_id', 'category']);
+    $table->index(['catalog_id', 'sort_order']);
+    $table->index('in_stock');
+    $table->fullText(['name', 'description']);
+});
+```
+
+---
+
+## Seeder Data
+
+### Development Seeders
+
+**UserSeeder:**
+```php
+User::create([
+    'name' => 'Sarah Wijaya',
+    'whatsapp' => '081234567890',
+    'username' => 'bajusarah',
+    'password' => Hash::make('password123'),
+    'verified_at' => now()
+]);
+```
+
+**CatalogSeeder:**
+```php
+Catalog::create([
+    'user_id' => 1,
+    'name' => 'Toko Baju Sarah',
+    'username' => 'bajusarah',
+    'description' => 'Fashion wanita trendy',
+    'category' => 'fashion'
+]);
+```
+
+**ProductSeeder:**
+```php
+Product::factory(20)->create([
+    'catalog_id' => 1
+]);
+```
+
+---
+
+## Database Optimization
+
+### Indexes
+- All foreign keys indexed automatically
+- Composite indexes for common queries
+- Cleanup indexes for maintenance jobs
+
+### Partitioning (Future)
+- Partition `clicks` table by month for better performance
+
+### Caching Strategy (Future)
+- Cache public catalog data (Redis)
+- Cache product count per category
+- Cache analytics aggregations
+
+### Backup Strategy
+- Daily full backup (automated)
+- Keep 7 days of backups
+- Weekly backup to external storage
+
+---
+
+## Schema Maintenance
+
+### Cleanup Jobs
+
+**Daily:**
+- Delete OTP codes older than 24 hours
+```sql
+DELETE FROM otp_codes WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR);
+```
+
+**Weekly:**
+- Archive clicks older than 90 days
+- Optimize tables
+
+**Monthly:**
+- Review slow queries (Laravel Telescope)
+- Add indexes as needed
+
+---
+
+## Security Considerations
+
+### Data Protection
+- Never store plain passwords
+- Never store credit card data (use Midtrans)
+- Sanitize all user inputs before storage
+- Use prepared statements (Laravel ORM automatic)
+
+### Access Control
+- Use foreign keys for data integrity
+- CASCADE delete for related records
+- Validate ownership before updates/deletes
+
+### Privacy
+- IP addresses anonymized after 30 days (future)
+- Right to be forgotten (delete user + cascade)
+- GDPR-compliant data export (future)
+
+---
+
+This schema supports MVP launch and scales to 10K+ users with proper indexing.

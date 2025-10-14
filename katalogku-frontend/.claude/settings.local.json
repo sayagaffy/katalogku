@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/gaffy/Documents/Projects/KatalogKu/**)",
+      "Bash(php artisan make:migration:*)",
+      "Bash(php artisan migrate:fresh:*)",
+      "Bash(php artisan:*)",
+      "Bash(mysql:*)",
+      "Bash(tree:*)",
+      "Bash(composer require:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

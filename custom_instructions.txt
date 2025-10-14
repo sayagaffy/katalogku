@@ -1,0 +1,425 @@
+# KATALOGKU - CLAUDE PROJECT CUSTOM INSTRUCTIONS
+
+Copy this entire content into your Claude Project's "Custom Instructions" section.
+
+---
+
+# PROJECT CONTEXT
+
+You are helping build **KatalogKu**, a link-in-bio SaaS platform for Indonesian sellers and resellers.
+
+**Core Value Proposition:**
+Upload produk → auto-compress images → organize by category → share 1 link → customer clicks → WhatsApp order.
+
+**Target Users:**
+1. General Sellers (82.5%) - UMKM with 10-50 products
+2. Resellers (16%) - Multi-supplier with 100+ products
+
+**Timeline:** 3 weeks MVP launch  
+**Budget:** < Rp 1 juta  
+**Market:** 13.5 million social media sellers in Indonesia
+
+---
+
+# TECH STACK
+
+## Backend
+- **Framework:** Laravel 11.x
+- **Database:** MySQL 8.0
+- **Authentication:** SMS OTP (Zenziva) + Laravel Sanctum
+- **Image Processing:** Intervention Image
+- **Storage:** Local (public disk)
+
+## Frontend
+- **Framework:** VueJS 3 (Composition API)
+- **Build Tool:** Vite
+- **Styling:** Tailwind CSS
+- **State:** Pinia
+- **Router:** Vue Router
+- **HTTP:** Axios
+
+## External Services
+- **SMS OTP:** Zenziva API (Rp 250/SMS)
+- **Hosting:** Shared hosting (Niagahoster)
+- **Domain:** katalogku.id
+
+---
+
+# CRITICAL SPECIFICATIONS
+
+## 1. Authentication Flow
+- **NO email verification** - Use SMS OTP only
+- **Registration:** WhatsApp number → Send OTP → Verify → Create account
+- **OTP:** 6 digits, expires in 5 minutes
+- **Rate Limit:** 3 OTP requests per hour per number
+- **Login:** WhatsApp + password (OTP not required for login)
+
+## 2. Image Processing
+- **Upload Limit:** Max 10MB (jpg, png, webp)
+- **Processing:**
+  1. Resize to max 1000x1000px (maintain aspect ratio)
+  2. Compress to WebP 80% quality (~300KB target)
+  3. Generate JPG fallback 85% quality
+  4. Save both formats
+- **Performance Target:** < 5s total upload + compress time
+- **Storage:** `/storage/products/{product_id}.webp` and `.jpg`
+
+## 3. Product Categories
+- **System:** One catalog per user, multiple categories per catalog
+- **Categories:** elektronik, fashion, makanan, kecantikan, rumah_tangga, lainnya
+- **Public View:** Filterable tabs by category
+- **FREE Tier:** 50 products max
+- **PRO Tier:** Unlimited products
+
+## 4. Public Catalog
+- **URL Pattern:** `katalogku.id/{username}`
+- **Performance:** Must load < 2 seconds on 3G
+- **Mobile-First:** 90%+ users on mobile
+- **WhatsApp Integration:** 
+  - Format: `wa.me/6281234567890?text={encoded_message}`
+  - Pre-filled: "Halo kak, mau order {Product Name} - Rp {Price}"
+
+---
+
+# DATABASE SCHEMA RULES
+
+## Key Tables
+1. **users** - WhatsApp, username (both unique)
+2. **otp_codes** - For SMS verification
+3. **catalogs** - One per user (MVP)
+4. **products** - With category, image_webp, image_jpg
+5. **clicks** - Analytics tracking
+
+## Relationships
+- User hasOne Catalog
+- Catalog hasMany Products
+- Product hasMany Clicks
+
+## Indexes Required
+- users.whatsapp (unique)
+- users.username (unique)
+- catalogs.username (unique)
+- products.catalog_id + category (composite)
+- products.sort_order (for ordering)
+
+---
+
+# API DESIGN PRINCIPLES
+
+## Response Format
+**Success:**
+```json
+{
+  "success": true,
+  "data": {...},
+  "message": "Action completed successfully"
+}
+```
+
+**Error:**
+```json
+{
+  "success": false,
+  "message": "Error description",
+  "errors": {
+    "field": ["Validation error"]
+  }
+}
+```
+
+## Naming Conventions
+- Endpoints: kebab-case (`/send-otp`, `/verify-otp`)
+- JSON keys: snake_case (`image_webp`, `catalog_id`)
+- Query params: camelCase optional
+
+## Authentication
+- Use Laravel Sanctum bearer tokens
+- Header: `Authorization: Bearer {token}`
+- Public endpoints: `/api/public/{username}`, `/api/clicks`
+
+---
+
+# CODING STANDARDS
+
+## Laravel (Backend)
+- **PSR-12** code style
+- **Service layer** for business logic
+- **Form Requests** for validation
+- **Resources** for API responses
+- **Migrations** for all schema changes
+- **Seeders** for test data
+
+**Example Structure:**
+```
+app/
+├── Http/
+│   ├── Controllers/Api/
+│   │   ├── AuthController.php
+│   │   ├── CatalogController.php
+│   │   └── ProductController.php
+│   ├── Requests/
+│   │   ├── RegisterRequest.php
+│   │   └── ProductStoreRequest.php
+│   └── Resources/
+│       ├── UserResource.php
+│       └── ProductResource.php
+├── Services/
+│   ├── OTPService.php
+│   └── ImageService.php
+└── Models/
+```
+
+## VueJS (Frontend)
+- **Composition API** (not Options API)
+- **script setup** syntax
+- **Pinia** for global state
+- **Composables** for reusable logic
+- **Services** for API calls
+
+**Example Structure:**
+```
+src/
+├── pages/
+│   ├── HomePage.vue
+│   ├── LoginPage.vue
+│   └── DashboardPage.vue
+├── components/
+│   ├── OTPInput.vue
+│   ├── ProductCard.vue
+│   └── CategoryFilter.vue
+├── stores/
+│   ├── auth.js
+│   ├── catalog.js
+│   └── products.js
+├── services/
+│   └── api.js
+└── composables/
+    └── useImageUpload.js
+```
+
+## CSS (Tailwind)
+- **Mobile-first** breakpoints
+- **Use utility classes** only
+- **Avoid custom CSS** unless absolutely necessary
+- **Responsive:** `sm:`, `md:`, `lg:` prefixes
+- **Dark mode:** Not required for MVP
+
+---
+
+# PERFORMANCE REQUIREMENTS
+
+## Backend
+- API response time: < 500ms average
+- Image compression: < 5s per image
+- Database queries: Use indexes, avoid N+1
+- File uploads: Stream processing, not load all to memory
+
+## Frontend
+- First Contentful Paint: < 2s
+- Time to Interactive: < 3s
+- Bundle size: < 500KB (gzipped)
+- Images: Lazy loading, WebP with JPG fallback
+
+## Public Catalog
+- **Critical:** Must load fast on slow networks
+- Static HTML generation (no heavy JS)
+- Inline critical CSS
+- Defer non-essential scripts
+- CDN for assets (future optimization)
+
+---
+
+# SECURITY CHECKLIST
+
+## Input Validation
+- ✅ Validate file types (whitelist: jpg, png, webp)
+- ✅ Validate file size (max 10MB)
+- ✅ Sanitize all user inputs (XSS protection)
+- ✅ Validate WhatsApp number format
+- ✅ Strong password requirements (min 8 chars)
+
+## Rate Limiting
+- ✅ OTP sending: 3 per hour per number
+- ✅ API endpoints: 60 requests per minute per user
+- ✅ Public catalog: 120 requests per minute per IP
+
+## File Upload
+- ✅ Store outside web root initially
+- ✅ Generate unique filenames
+- ✅ Validate image contents (not just extension)
+- ✅ Move to public storage after validation
+
+## Authentication
+- ✅ Hash passwords with bcrypt
+- ✅ Expire OTP codes after 5 minutes
+- ✅ Invalidate used OTP codes
+- ✅ HTTPS only in production
+
+---
+
+# MOBILE-FIRST DESIGN RULES
+
+## Touch Targets
+- Minimum button size: **44x44px**
+- Spacing between clickable elements: **8px**
+- Forms: Large input fields (min 48px height)
+
+## Typography
+- Base font size: **16px** (prevent zoom on iOS)
+- Line height: **1.5** for readability
+- Headings: Scale appropriately (1.5rem, 2rem, etc.)
+
+## Layout
+- Single column on mobile
+- Sticky header/footer for navigation
+- Bottom navigation for primary actions
+- Pull-to-refresh (future enhancement)
+
+## Images
+- Always use `<picture>` tag with WebP + JPG
+- Lazy loading: `loading="lazy"`
+- Responsive images: `srcset` for different sizes (future)
+
+---
+
+# ERROR HANDLING
+
+## Backend
+- Log all exceptions to `storage/logs/laravel.log`
+- Return user-friendly error messages
+- Never expose stack traces in production
+- Use HTTP status codes correctly (200, 201, 400, 401, 404, 422, 500)
+
+## Frontend
+- Show toast notifications for errors
+- Graceful degradation (show cached data if API fails)
+- Retry failed requests (max 3 times)
+- Clear error messages in Indonesian
+
+**Example Error Messages:**
+- Upload failed: "Upload gagal. Coba lagi atau cek koneksi internet."
+- OTP invalid: "Kode OTP salah atau kadaluarsa. Minta kode baru?"
+- Server error: "Server sedang sibuk. Coba lagi dalam beberapa saat."
+
+---
+
+# DON'T INCLUDE (Post-MVP Features)
+
+These features are NOT part of MVP. Don't implement them:
+- ❌ Email authentication/verification
+- ❌ Payment integration (manual upgrade for now)
+- ❌ Marketplace auto-import (Shopee/Tokopedia API)
+- ❌ Advanced analytics dashboard
+- ❌ Email notifications
+- ❌ Multi-language support
+- ❌ Social login (Google/Facebook)
+- ❌ Dark mode
+- ❌ PWA features
+- ❌ Export data (CSV/PDF)
+
+---
+
+# WHEN WRITING CODE
+
+## Always Include
+1. ✅ Complete implementation (no TODOs or placeholders)
+2. ✅ Error handling and validation
+3. ✅ Comments for complex logic
+4. ✅ Type hints (PHP 8.2 features)
+5. ✅ Responsive design (mobile-first)
+
+## Code Quality
+- Write clean, readable code
+- Follow SOLID principles
+- DRY (Don't Repeat Yourself)
+- KISS (Keep It Simple, Stupid)
+- Meaningful variable/function names
+
+## Testing Mindset
+- Consider edge cases
+- Handle empty states
+- Validate all inputs
+- Check boundary conditions
+- Think about user errors
+
+---
+
+# EXAMPLE CODE PATTERNS
+
+## Laravel Controller
+```php
+public function store(ProductStoreRequest $request)
+{
+    try {
+        $product = $this->productService->create(
+            auth()->user()->catalog,
+            $request->validated()
+        );
+        
+        return response()->json([
+            'success' => true,
+            'data' => new ProductResource($product),
+            'message' => 'Produk berhasil ditambahkan'
+        ], 201);
+    } catch (\Exception $e) {
+        Log::error('Product creation failed: ' . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal menambahkan produk'
+        ], 500);
+    }
+}
+```
+
+## VueJS Component
+```vue
+<script setup>
+import { ref } from 'vue'
+import { useProductStore } from '@/stores/products'
+
+const productStore = useProductStore()
+const loading = ref(false)
+
+const handleSubmit = async (formData) => {
+  loading.value = true
+  try {
+    await productStore.createProduct(formData)
+    // Success handling
+  } catch (error) {
+    // Error handling
+  } finally {
+    loading.value = false
+  }
+}
+</script>
+```
+
+---
+
+# REFERENCE DOCUMENTS
+
+Always reference these knowledge base documents:
+- `02-PRD.md` - Product requirements and features
+- `03-Database-Schema.md` - Database structure
+- `04-API-Specification.md` - API endpoints and contracts
+- `05-Frontend-Architecture.md` - Component structure
+- `06-Development-Roadmap.md` - Timeline and tasks
+- `07-User-Journey.md` - User flows and UX
+- `08-Image-Processing.md` - Image compression specs
+- `09-OTP-Authentication.md` - SMS OTP implementation
+
+---
+
+# HELPFUL REMINDERS
+
+- 🇮🇩 **Indonesia-focused:** UI in Bahasa, Rupiah currency, WhatsApp integration
+- 📱 **Mobile-first:** 90%+ users on mobile, optimize for 3G networks
+- ⚡ **Performance:** Fast loading is critical for user retention
+- 🔒 **Security:** Validate everything, never trust user input
+- 💰 **Cost-conscious:** Optimize OTP usage, efficient image storage
+- 🎯 **MVP mindset:** Ship fast, iterate based on user feedback
+
+---
+
+When you help with code, provide complete, production-ready implementations with proper error handling and validation. Always optimize for the Indonesian market and mobile users.

@@ -1,0 +1,753 @@
+# DEVELOPMENT ROADMAP - KATALOGKU
+
+## Overview
+
+**Timeline:** 3 weeks (21 days)  
+**Goal:** Launch MVP with core features  
+**Team:** 1 developer + Claude Code assistant  
+**Budget:** < Rp 1 juta
+
+---
+
+## Week 1: Foundation & Backend (Days 1-7)
+
+### Day 1-2: Project Setup & Database
+
+**Goals:**
+- ✅ Development environment ready
+- ✅ Database schema created
+- ✅ Test data seeded
+
+**Tasks:**
+
+**Day 1 Morning: Laravel Backend Setup**
+```bash
+# Create Laravel project
+composer create-project laravel/laravel katalogku-api
+cd katalogku-api
+
+# Install dependencies
+composer require intervention/image
+
+# Configure .env
+cp .env.example .env
+# Update DB credentials, app settings
+php artisan key:generate
+
+# Storage setup
+php artisan storage:link
+mkdir -p storage/app/public/products
+```
+
+**Day 1 Afternoon: Database Migrations**
+```bash
+# Create migrations
+php artisan make:migration create_users_table
+php artisan make:migration create_otp_codes_table
+php artisan make:migration create_catalogs_table
+php artisan make:migration create_products_table
+php artisan make:migration create_clicks_table
+
+# Run migrations
+php artisan migrate
+```
+
+**Day 2 Morning: Models & Relationships**
+```bash
+# Create models
+php artisan make:model User
+php artisan make:model OTPCode
+php artisan make:model Catalog
+php artisan make:model Product
+php artisan make:model Click
+
+# Define relationships in models
+# User hasOne Catalog
+# Catalog hasMany Products
+# Product hasMany Clicks
+```
+
+**Day 2 Afternoon: Seeders**
+```bash
+# Create seeders
+php artisan make:seeder UserSeeder
+php artisan make:seeder CatalogSeeder
+php artisan make:seeder ProductSeeder
+
+# Run seeders
+php artisan db:seed
+```
+
+**Deliverables:**
+- ✅ Laravel project initialized
+- ✅ Database schema complete
+- ✅ Models with relationships
+- ✅ Test data available
+
+---
+
+### Day 3-4: Authentication System
+
+**Goals:**
+- ✅ SMS OTP integration
+- ✅ User registration working
+- ✅ Login system functional
+
+**Tasks:**
+
+**Day 3 Morning: Zenziva Integration**
+```bash
+# Create OTP service
+php artisan make:service OTPService
+
+# Implement Zenziva API call
+# Store OTP in database with expiry
+# Rate limiting logic
+```
+
+**Day 3 Afternoon: Auth Controllers**
+```bash
+# Create controllers
+php artisan make:controller Api/AuthController
+
+# Endpoints:
+# POST /api/send-otp
+# POST /api/verify-otp
+# POST /api/login
+# POST /api/logout
+# GET /api/user
+```
+
+**Day 4 Morning: Laravel Sanctum Setup**
+```bash
+# Install Sanctum
+composer require laravel/sanctum
+php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"
+php artisan migrate
+
+# Configure in kernel.php and config/sanctum.php
+```
+
+**Day 4 Afternoon: Testing Auth Flow**
+```bash
+# Test with Postman/cURL
+# Register new user
+# Verify OTP
+# Login
+# Get user info
+# Logout
+```
+
+**Deliverables:**
+- ✅ OTP sending works
+- ✅ User can register
+- ✅ Login generates token
+- ✅ Protected routes work
+
+---
+
+### Day 5-7: Product Management & Image Processing
+
+**Goals:**
+- ✅ Product CRUD complete
+- ✅ Image upload & compression working
+- ✅ Catalog management ready
+
+**Tasks:**
+
+**Day 5 Morning: Image Service**
+```bash
+# Create ImageService
+php artisan make:service ImageService
+
+# Implement:
+# - Resize to 1000x1000px
+# - Compress to WebP 80%
+# - Generate JPG fallback 85%
+# - Save to storage
+# - Return URLs
+```
+
+**Day 5 Afternoon: Product Controller**
+```bash
+# Create controller & requests
+php artisan make:controller Api/ProductController
+php artisan make:request ProductStoreRequest
+php artisan make:request ProductUpdateRequest
+
+# Endpoints:
+# GET /api/products
+# POST /api/products (with image upload)
+# PATCH /api/products/{id}
+# DELETE /api/products/{id}
+# POST /api/products/reorder
+```
+
+**Day 6 Morning: Catalog Controller**
+```bash
+# Create controller
+php artisan make:controller Api/CatalogController
+
+# Endpoints:
+# GET /api/catalog
+# POST /api/catalog
+# GET /api/check-username
+```
+
+**Day 6 Afternoon: Test Product Upload**
+```bash
+# Test image upload flow
+# Upload 10MB image
+# Verify compression to ~300KB
+# Check both WebP and JPG created
+# Verify storage paths correct
+```
+
+**Day 7: API Testing & Refinement**
+- Test all endpoints with Postman
+- Fix bugs found during testing
+- Add validation messages in Indonesian
+- Optimize database queries
+- Add proper error handling
+
+**Deliverables:**
+- ✅ Product CRUD API complete
+- ✅ Image compression working
+- ✅ Catalog setup working
+- ✅ All endpoints tested
+
+---
+
+## Week 2: Frontend Development (Days 8-14)
+
+### Day 8-9: VueJS Setup & Auth Pages
+
+**Goals:**
+- ✅ VueJS project initialized
+- ✅ Authentication pages working
+- ✅ OTP flow functional
+
+**Tasks:**
+
+**Day 8 Morning: VueJS Project Setup**
+```bash
+# Create Vue project
+npm create vue@latest katalogku-frontend
+cd katalogku-frontend
+
+# Select options:
+# ✅ Vue Router
+# ✅ Pinia
+# ❌ TypeScript (keep it simple)
+
+# Install dependencies
+npm install
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+
+# Install additional packages
+npm install axios
+```
+
+**Day 8 Afternoon: Configure Tailwind & Router**
+```javascript
+// Configure tailwind.config.js
+// Setup router with auth guards
+// Create API service layer (axios instance)
+// Setup Pinia stores (auth, catalog, products)
+```
+
+**Day 9 Morning: Auth Pages**
+```bash
+# Create pages:
+# - HomePage.vue (landing)
+# - LoginPage.vue
+# - RegisterPage.vue
+
+# Create components:
+# - OTPInput.vue
+# - WhatsAppInput.vue
+```
+
+**Day 9 Afternoon: Auth Store & Integration**
+```javascript
+// Implement auth store (Pinia)
+// Connect to backend API
+// Test registration flow
+// Test login flow
+// Handle token storage
+```
+
+**Deliverables:**
+- ✅ VueJS project running
+- ✅ User can register with OTP
+- ✅ User can login
+- ✅ Token management working
+
+---
+
+### Day 10-11: Dashboard & Product Management
+
+**Goals:**
+- ✅ Dashboard layout complete
+- ✅ Product list & forms working
+- ✅ Image upload functional
+
+**Tasks:**
+
+**Day 10 Morning: Dashboard Layout**
+```vue
+<!-- Create layout components: -->
+<!-- - AppHeader.vue (logo, user menu) -->
+<!-- - AppSidebar.vue (navigation) -->
+<!-- - DashboardPage.vue (main view) -->
+```
+
+**Day 10 Afternoon: Onboarding Flow**
+```vue
+<!-- SetupCatalogPage.vue -->
+<!-- 3-step wizard: -->
+<!-- 1. Catalog name -->
+<!-- 2. Choose username -->
+<!-- 3. Select category (optional) -->
+```
+
+**Day 11 Morning: Product Components**
+```vue
+<!-- Create components: -->
+<!-- - ProductList.vue -->
+<!-- - ProductCard.vue -->
+<!-- - ProductForm.vue (modal) -->
+<!-- - ImageUpload.vue -->
+```
+
+**Day 11 Afternoon: Product Store & Integration**
+```javascript
+// Implement products store
+// Connect create/update/delete to API
+// Handle image upload with progress
+// Test full CRUD flow
+```
+
+**Deliverables:**
+- ✅ Dashboard functional
+- ✅ User can add products
+- ✅ User can edit/delete products
+- ✅ Image upload works
+
+---
+
+### Day 12-13: Public Catalog Page
+
+**Goals:**
+- ✅ Public catalog page live
+- ✅ Category filtering works
+- ✅ WhatsApp integration functional
+- ✅ Mobile-optimized
+
+**Tasks:**
+
+**Day 12 Morning: Public Catalog Page**
+```vue
+<!-- PublicCatalogPage.vue -->
+<!-- Fetch catalog by username -->
+<!-- Display products in grid -->
+<!-- Mobile-first responsive design -->
+```
+
+**Day 12 Afternoon: Category Filter**
+```vue
+<!-- CategoryFilter.vue -->
+<!-- Horizontal scrollable tabs -->
+<!-- Filter products by category -->
+<!-- Show count per category -->
+```
+
+**Day 13 Morning: WhatsApp Integration**
+```javascript
+// Generate WhatsApp link
+// Format: wa.me/[number]?text=[message]
+// Pre-fill with product name & price
+// Track click before redirect
+```
+
+**Day 13 Afternoon: Mobile Optimization**
+```css
+/* Optimize for mobile */
+/* Touch-friendly buttons (min 44px) */
+/* Fast loading (<2s target) */
+/* Lazy load images */
+/* Test on actual mobile device */
+```
+
+**Deliverables:**
+- ✅ Public catalog accessible at `/{username}`
+- ✅ Products filterable by category
+- ✅ WhatsApp order button works
+- ✅ Loads fast on 3G
+
+---
+
+### Day 14: Analytics Dashboard
+
+**Goals:**
+- ✅ Basic analytics working
+- ✅ Click tracking implemented
+- ✅ Charts displaying data
+
+**Tasks:**
+
+**Day 14 Morning: Analytics Backend**
+```bash
+# Create AnalyticsController
+php artisan make:controller Api/AnalyticsController
+
+# Endpoints:
+# GET /api/analytics/overview
+# POST /api/clicks (public, track clicks)
+
+# Implement aggregation queries:
+# - Total clicks by period
+# - Top products
+# - Clicks by date
+# - Clicks by category
+```
+
+**Day 14 Afternoon: Analytics Frontend**
+```vue
+<!-- AnalyticsPage.vue -->
+<!-- Display stats cards: -->
+<!-- - Total clicks -->
+<!-- - Top 5 products -->
+<!-- - Clicks chart (simple bar/line) -->
+
+<!-- Components: -->
+<!-- - StatsCard.vue -->
+<!-- - ClicksChart.vue (can use Chart.js or simple DIV bars) -->
+```
+
+**Deliverables:**
+- ✅ Analytics dashboard functional
+- ✅ Click tracking works
+- ✅ Stats display correctly
+
+---
+
+## Week 3: Polish, Deploy & Launch (Days 15-21)
+
+### Day 15-17: Deployment Preparation
+
+**Goals:**
+- ✅ Production environment ready
+- ✅ App deployed to shared hosting
+- ✅ Domain configured
+
+**Tasks:**
+
+**Day 15: Hosting Setup**
+```bash
+# Sign up for Niagahoster shared hosting
+# Create database via cPanel
+# Configure DNS for katalogku.id
+# Point A record to hosting IP
+```
+
+**Day 16 Morning: Backend Deployment**
+```bash
+# Upload Laravel files via FTP/Git
+# Configure .env for production
+# Run migrations on production DB
+# Test API endpoints
+# Configure SSL (Let's Encrypt)
+```
+
+**Day 16 Afternoon: Frontend Build & Deploy**
+```bash
+# Build frontend for production
+npm run build
+
+# Upload dist/ to public_html/
+# Configure .htaccess for Vue Router
+# Test all routes work
+```
+
+**Day 17: Environment Testing**
+```bash
+# Test full flow on production:
+# 1. Register user
+# 2. Setup catalog
+# 3. Add products
+# 4. View public catalog
+# 5. Click WhatsApp link
+# 6. Check analytics
+
+# Verify:
+# - OTP delivery works (Zenziva production)
+# - Image compression works
+# - Public catalog loads fast
+# - Mobile responsive
+# - SSL working
+```
+
+**Deliverables:**
+- ✅ Backend deployed
+- ✅ Frontend deployed
+- ✅ Domain active with SSL
+- ✅ Production tested
+
+---
+
+### Day 18-19: Bug Fixes & Optimization
+
+**Goals:**
+- ✅ All bugs fixed
+- ✅ Performance optimized
+- ✅ User experience polished
+
+**Tasks:**
+
+**Day 18: Bug Fixing**
+```
+Priority bugs to check:
+- Image upload errors on mobile
+- OTP not received
+- Username validation issues
+- Category filter not working
+- WhatsApp link malformed
+- Analytics not tracking
+- Token expiration handling
+- Form validation messages
+```
+
+**Day 19 Morning: Performance Optimization**
+```bash
+# Backend:
+# - Add database indexes
+# - Optimize N+1 queries
+# - Cache public catalog (Redis future)
+
+# Frontend:
+# - Lazy load images
+# - Code splitting
+# - Minify assets
+# - Compress responses (gzip)
+```
+
+**Day 19 Afternoon: UX Polish**
+```
+- Add loading states everywhere
+- Better error messages
+- Empty states with CTAs
+- Success confirmations
+- Smooth transitions
+- Copy to clipboard for share link
+- Toast notifications
+```
+
+**Deliverables:**
+- ✅ Zero critical bugs
+- ✅ Fast loading times
+- ✅ Smooth user experience
+
+---
+
+### Day 20-21: Soft Launch & Iteration
+
+**Goals:**
+- ✅ Landing page live
+- ✅ First 50 users onboarded
+- ✅ Feedback collected
+
+**Tasks:**
+
+**Day 20 Morning: Landing Page**
+```vue
+<!-- Create/enhance HomePage.vue -->
+<!-- - Hero section with value prop -->
+<!-- - How it works (3 steps) -->
+<!-- - Example catalog preview -->
+<!-- - Pricing (FREE tier) -->
+<!-- - CTA: "Daftar Gratis" -->
+```
+
+**Day 20 Afternoon: Launch Preparation**
+```
+Marketing checklist:
+- Create Facebook post
+- Post in UMKM groups (5-10 groups)
+- Share in WhatsApp groups
+- Direct message to 20 seller friends
+- Prepare welcome email template
+- Setup Google Analytics (optional)
+```
+
+**Day 21: Soft Launch Day**
+```
+Launch activities:
+- Go live announcement (social media)
+- Monitor registrations closely
+- Respond to user questions quickly
+- Fix urgent bugs immediately
+- Collect feedback via:
+  - In-app feedback form
+  - WhatsApp group for beta users
+  - Google Forms survey
+
+Target: 50 users by end of day
+Track: Registration, completion rate, products added
+```
+
+**Deliverables:**
+- ✅ Landing page published
+- ✅ 50+ users registered
+- ✅ Feedback collected
+- ✅ Initial metrics tracked
+
+---
+
+## Post-Launch (Week 4+)
+
+### Week 4: Iteration & Improvements
+
+**Based on user feedback:**
+- Fix most reported bugs
+- Improve most confusing UX
+- Add most requested features (if simple)
+- Optimize conversion funnel
+- Improve onboarding flow
+
+**Goals:**
+- 500 registered users
+- 10% activation rate (50 with 5+ products)
+- 5% using catalog actively (25 with traffic)
+
+### Month 2: Growth & PRO Tier
+
+**Features to add:**
+- PRO tier payment (manual invoicing initially)
+- Custom domain support
+- Remove watermark for PRO users
+- Advanced analytics
+- Bulk product actions
+
+**Marketing:**
+- Facebook/Instagram Ads (Rp 2-5 juta budget)
+- Content marketing (blog posts, tutorials)
+- SEO optimization
+- Referral program
+
+**Goals:**
+- 2,000 total users
+- 50 PRO conversions (Rp 1.95 juta MRR)
+
+### Month 3-6: Scale
+
+**Features:**
+- PREMIUM tier (reseller features)
+- Marketplace auto-import
+- API access
+- Mobile app (Flutter)
+
+**Goals:**
+- 10,000 total users
+- 800 PRO + 50 PREMIUM users
+- Rp 35+ juta MRR
+
+---
+
+## Daily Development Checklist
+
+### Every Day:
+- [ ] Morning standup (review tasks for the day)
+- [ ] Code for 6-8 hours (focused sessions)
+- [ ] Commit code to Git (multiple times)
+- [ ] Test what you built
+- [ ] Document any issues/decisions
+- [ ] Evening review (what worked, what didn't)
+
+### Every Week:
+- [ ] Deploy to staging for testing
+- [ ] Review full feature flow
+- [ ] Update progress tracker
+- [ ] Adjust timeline if needed
+
+---
+
+## Risk Mitigation
+
+### If Behind Schedule:
+
+**Priority cuts (can move post-MVP):**
+- Analytics dashboard → Show basic numbers only
+- Category system → Launch with no categories first
+- Onboarding flow → Skip wizard, direct to dashboard
+- Image optimization → Use basic resize (add WebP later)
+
+**DO NOT cut:**
+- OTP authentication (core)
+- Product CRUD (core)
+- Public catalog (core)
+- WhatsApp integration (core)
+
+### If Technical Blockers:
+
+**Zenziva OTP issues:**
+- Have backup SMS provider ready
+- Test in sandbox mode early
+
+**Image compression slow:**
+- Start with basic resize
+- Add queue jobs later
+
+**Shared hosting limitations:**
+- Have VPS migration plan ready
+- Monitor resource usage
+
+---
+
+## Success Metrics
+
+### Week 1 End:
+- ✅ Backend API fully functional
+- ✅ All endpoints tested
+- ✅ Database optimized
+
+### Week 2 End:
+- ✅ Frontend working locally
+- ✅ Full user flow tested
+- ✅ Mobile responsive
+
+### Week 3 End:
+- ✅ Deployed to production
+- ✅ 50+ users registered
+- ✅ Zero critical bugs
+- ✅ Public catalogs live
+
+---
+
+## Tools & Resources
+
+**Development:**
+- VSCode with extensions (PHP Intelephense, Volar)
+- Postman for API testing
+- Git for version control
+- TablePlus for database management
+
+**Deployment:**
+- Niagahoster cPanel
+- FileZilla for FTP
+- Git for deployment (preferred)
+
+**Monitoring:**
+- Laravel Telescope (development)
+- Error logs (production)
+- Google Analytics (optional)
+
+**Communication:**
+- Claude Code for pair programming
+- WhatsApp for user support
+- Notion for task tracking (optional)
+
+---
+
+This roadmap is aggressive but achievable with focused execution. Adjust as needed based on progress!

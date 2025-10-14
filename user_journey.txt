@@ -1,0 +1,666 @@
+# USER JOURNEY - KATALOGKU
+
+## Journey Overview
+
+This document details the complete user journey from discovery to daily usage.
+
+**Key Flows:**
+1. Registration & Onboarding
+2. Creating First Product
+3. Sharing Catalog
+4. Customer Experience
+5. Analytics Review
+
+---
+
+## 1. REGISTRATION FLOW
+
+### Entry Points
+- Landing page (katalogku.id)
+- Social media ads
+- Friend referral
+- Blog post / tutorial
+
+### Step 1: Landing Page
+
+**URL:** `https://katalogku.id/`
+
+**Content:**
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏠 KATALOGKU
+Link di Bio = Katalog Cantik
+
+[Hero Image: Beautiful catalog example]
+
+✓ Setup 5 menit
+✓ Gratis selamanya (50 produk)
+✓ Customer langsung ke WhatsApp
+
+[Coba Gratis Sekarang →]
+[Sudah punya akun? Login]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📱 Cara Kerja
+
+1. Upload produk kamu
+2. Dapat 1 link katalog
+3. Taruh di bio IG/TikTok
+4. Customer klik → langsung order!
+
+[Lihat Contoh Katalog →]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**User Action:** Click "Coba Gratis Sekarang"
+
+---
+
+### Step 2: Registration Page
+
+**URL:** `/register`
+
+**Form:**
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 Daftar Gratis
+
+Nama Lengkap *
+[_____________________________]
+Contoh: Sarah Wijaya
+
+Nomor WhatsApp *
+[+62] [_______________________]
+💡 Untuk terima order dari customer
+
+Password *
+[_____________________________]
+Min. 8 karakter
+
+Konfirmasi Password *
+[_____________________________]
+
+☐ Saya setuju dengan Syarat & Ketentuan
+
+[Kirim Kode OTP →]
+
+Sudah punya akun? [Login di sini]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Validations:**
+- Name: 3-100 chars
+- WhatsApp: Valid Indonesian number (08xxx or +628xxx)
+- Password: Min 8 chars, must match
+- Terms: Must be checked
+
+**On Submit:**
+- Validate inputs
+- Check WhatsApp not already registered
+- Call API: `POST /api/send-otp`
+- Show OTP input screen
+
+---
+
+### Step 3: OTP Verification
+
+**Screen:**
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📱 Masukkan Kode OTP
+
+Kode OTP telah dikirim ke
+081234567890
+
+[□] [□] [□] [□] [□] [□]
+
+Berlaku selama 05:00
+
+[Verifikasi →]
+
+Belum terima kode?
+[Kirim Ulang] (aktif setelah 60 detik)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Behavior:**
+- Auto-focus first input
+- Auto-advance to next input on type
+- Auto-submit when 6 digits entered
+- Countdown timer visible
+- Resend button disabled for 60 seconds
+- Rate limit: Max 3 OTP requests per hour
+
+**On Submit:**
+- Call API: `POST /api/verify-otp`
+- Store auth token
+- Redirect to onboarding
+
+---
+
+## 2. ONBOARDING FLOW
+
+### Step 1: Welcome Screen
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎉 Selamat Datang, Sarah!
+
+Mari setup katalog kamu dalam 2 langkah:
+
+1️⃣ Nama Toko
+2️⃣ Username (Link Katalog)
+
+[Mulai Setup →]
+[Skip, nanti aja]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+### Step 2: Catalog Name
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1️⃣ Nama Toko Kamu
+
+[_____________________________]
+Contoh: Toko Baju Sarah
+
+💡 Nama ini muncul di katalog kamu
+
+[Lanjut →]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+### Step 3: Choose Username
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2️⃣ Pilih Username Katalog
+
+Link katalog kamu:
+katalogku.id/[____________]
+
+Saran berdasarkan nama kamu:
+☐ bajusarah
+☐ sarahstore
+☐ sarah_collection
+
+Username kamu:
+[@_________________________]
+
+✓ Hanya huruf, angka, _ dan -
+✓ Min 3 karakter
+✓ Tidak bisa diubah!
+
+[Cek Ketersediaan]
+
+Status: ⏳ Mengecek...
+Status: ✅ "bajusarah" tersedia!
+
+[Selesai →]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Real-time Check:**
+- On blur or button click
+- Call API: `GET /api/check-username?username=bajusarah`
+- Show availability status
+- Suggest alternatives if taken
+
+---
+
+### Step 4: Setup Complete
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ Katalog Kamu Sudah Siap!
+
+🔗 katalogku.id/bajusarah
+
+Langkah selanjutnya:
+1️⃣ Tambah produk pertama
+2️⃣ Share link ke customer
+3️⃣ Mulai terima order! 🚀
+
+[Tambah Produk Sekarang →]
+
+(Auto-redirect setelah 3 detik)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+## 3. DASHBOARD (First Visit)
+
+### Empty State
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Dashboard
+
+Halo, Sarah! 👋
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 PRODUK KAMU (0/50)
+
+[Empty state illustration]
+
+Belum ada produk nih!
+Yuk tambah produk pertama kamu.
+
+[+ Tambah Produk]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔗 LINK KATALOG
+
+katalogku.id/bajusarah
+[📋 Salin Link] [👁️ Preview] [📱 Share WA]
+
+💡 Taruh link ini di bio IG/TikTok!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 ANALYTICS (7 hari terakhir)
+
+👁️ Total Klik: 0
+📱 Produk Diklik: 0
+💬 Ke WhatsApp: 0
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+## 4. ADD PRODUCT FLOW
+
+### Step 1: Product Form (Modal)
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 Tambah Produk
+
+Foto Produk *
+┌─────────────────────────────┐
+│ [📸 Upload Foto]            │
+│                             │
+│ Klik atau drag & drop       │
+│ Max 10MB, JPG/PNG           │
+└─────────────────────────────┘
+
+Nama Produk *
+[_____________________________]
+Contoh: Kemeja Flanel Premium
+
+Kategori *
+[Fashion ▼]
+elektronik | fashion | makanan
+kecantikan | rumah_tangga | lainnya
+
+Harga *
+[Rp] [________________________]
+Contoh: 85000
+
+Deskripsi (opsional)
+[                             ]
+[                             ]
+[                             ]
+Max 500 karakter
+
+☑ Stok tersedia
+
+Link Eksternal (opsional)
+[_____________________________]
+💡 Link ke Shopee/Tokopedia
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[Simpan Produk] [Batal]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Image Upload Flow:**
+1. User selects image
+2. Client validation (type, size)
+3. Show preview with progress bar
+4. Upload to server
+5. Server: resize, compress (WebP + JPG)
+6. Return URLs
+7. Show success message
+
+**On Success:**
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Produk Berhasil Ditambahkan!
+
+[Product preview with image]
+Kemeja Flanel Premium
+Rp 85.000
+
+[Tambah Produk Lagi]
+[Lihat Katalog]
+
+(Auto-close after 2 seconds)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+### Step 2: Dashboard with Products
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 PRODUK KAMU (1/50)
+
+Filter: [Semua ▼] | Cari: [_______]
+
+┌────────────────────────────┐
+│ [Thumbnail]                │
+│ Kemeja Flanel Premium      │
+│ Rp 85.000 | Fashion        │
+│ ✓ Stok ready               │
+│                            │
+│ 👁️ 0 klik | 💬 0 order    │
+│                            │
+│ [✏️ Edit] [🗑️ Hapus]       │
+└────────────────────────────┘
+
+[+ Tambah Produk] (49 slot tersisa)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+## 5. SHARING CATALOG
+
+### Copy Link Flow
+
+```
+User clicks [Salin Link] button
+   ↓
+Copy to clipboard: https://katalogku.id/bajusarah
+   ↓
+Toast notification: ✅ "Link berhasil disalin!"
+   ↓
+User pastes in IG bio / TikTok bio
+```
+
+### Share to WhatsApp
+
+```
+User clicks [Share WA] button
+   ↓
+Open WhatsApp with pre-filled message:
+"Halo! Cek katalog produk aku di
+https://katalogku.id/bajusarah
+
+Ada banyak produk keren nih! 😊"
+```
+
+---
+
+## 6. CUSTOMER EXPERIENCE (Public Catalog)
+
+### Step 1: Customer Clicks Link in Bio
+
+**Instagram → Bio → Click Link**
+
+```
+User in IG: @bajusarah
+   ↓
+Click "katalogku.id/bajusarah" in bio
+   ↓
+Open in browser
+   ↓
+Load public catalog page
+```
+
+---
+
+### Step 2: Public Catalog View
+
+**URL:** `https://katalogku.id/bajusarah`
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[Avatar] TOKO BAJU SARAH
+"Fashion wanita trendy & affordable"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[Semua] [Fashion] [Aksesoris]
+  (15)    (10)       (5)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌──────────┬──────────┐
+│ [Image]  │ [Image]  │
+│ Kemeja   │ Dress    │
+│ Flanel   │ Korea    │
+│ Rp 85K   │ Rp 120K  │
+│          │          │
+│ [💬 Order│ [💬 Order│
+└──────────┴──────────┘
+
+┌──────────┬──────────┐
+│ [Image]  │ [Image]  │
+│ Celana   │ Kaos     │
+│ Jeans    │ Polos    │
+│ Rp 95K   │ Rp 45K   │
+│          │          │
+│ [💬 Order│ [💬 Order│
+└──────────┴──────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Powered by KatalogKu
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Mobile Optimized:**
+- 2-column grid on mobile
+- Large touch targets (44x44px min)
+- Fast loading with WebP images
+- Lazy loading for images below fold
+- Smooth category filter scroll
+
+---
+
+### Step 3: Customer Orders
+
+```
+Customer clicks [Order] button
+   ↓
+Track click (async POST /api/clicks)
+   ↓
+Redirect to WhatsApp:
+wa.me/6281234567890?text=Halo%20kak%2C%20mau%20order%20Kemeja%20Flanel%20Premium%20-%20Rp%2085.000
+   ↓
+WhatsApp opens with pre-filled message:
+
+"Halo kak, mau order Kemeja Flanel Premium - Rp 85.000"
+   ↓
+Customer sends message
+   ↓
+Seller receives order via WhatsApp ✅
+```
+
+---
+
+## 7. ANALYTICS REVIEW (Seller)
+
+### Dashboard Analytics
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 ANALYTICS
+
+Periode: [7 hari terakhir ▼]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌───────────┬───────────┬───────────┐
+│ 👁️ Dilihat │ 📱 Diklik │ 💬 Order  │
+│           │           │ (estimasi)│
+│   125     │    45     │    ~35    │
+└───────────┴───────────┴───────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🏆 PRODUK TERLARIS
+
+1. Kemeja Flanel Premium
+   👁️ 25 klik | 📊 55%
+
+2. Dress Korea Style  
+   👁️ 15 klik | 📊 33%
+
+3. Celana Jeans Wanita
+   👁️ 5 klik | 📊 11%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📈 GRAFIK KLIK
+
+[Simple bar chart showing clicks per day]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Insights:**
+- Seller knows which products popular
+- Can stock more of best sellers
+- See trends over time
+- Optimize catalog based on data
+
+---
+
+## EDGE CASES & ERROR HANDLING
+
+### Registration Errors
+
+**WhatsApp Already Registered:**
+```
+❌ Nomor WhatsApp ini sudah terdaftar.
+[Login] atau gunakan nomor lain.
+```
+
+**OTP Expired:**
+```
+⏰ Kode OTP kadaluarsa.
+[Minta Kode Baru]
+```
+
+**Rate Limit Exceeded:**
+```
+⚠️ Terlalu banyak percobaan.
+Coba lagi dalam 60 menit.
+```
+
+---
+
+### Product Upload Errors
+
+**File Too Large:**
+```
+❌ Ukuran foto maksimal 10MB.
+Kompres dulu ya!
+```
+
+**Invalid Format:**
+```
+❌ Format file harus JPG, PNG, atau WebP
+```
+
+**Upload Failed:**
+```
+❌ Upload gagal. Coba lagi atau
+cek koneksi internet.
+```
+
+**Reached Limit (FREE Tier):**
+```
+⚠️ Kamu sudah punya 50 produk (limit FREE tier)
+
+Upgrade ke PRO untuk unlimited produk!
+[Lihat Paket PRO →]
+```
+
+---
+
+### Public Catalog Errors
+
+**Username Not Found:**
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+404 - Katalog Tidak Ditemukan
+
+Katalog "bajusarah123" tidak ada.
+
+Mungkin salah ketik?
+Atau katalog sudah dihapus.
+
+[Buat Katalog Sendiri →]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**No Products Yet:**
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Avatar] TOKO BAJU SARAH
+
+Belum ada produk untuk ditampilkan.
+
+Nantikan produk menarik dari kami! ✨
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+## USER FEEDBACK LOOPS
+
+### In-App Feedback (Post-MVP)
+
+After 7 days or 5 products added:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💬 Gimana pengalaman kamu?
+
+Bantu kami berkembang dengan feedback!
+
+[⭐⭐⭐⭐⭐]
+
+[Kirim Feedback]
+[Nanti aja]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+## MOBILE-FIRST CONSIDERATIONS
+
+### Touch Targets
+- All buttons minimum 44x44px
+- Adequate spacing (8px+) between elements
+- No hover states (use active states)
+
+### Performance
+- Lazy load images below fold
+- Use WebP with JPG fallback
+- Minimal JavaScript
+- Target <2s load time
+
+### Navigation
+- Sticky header on scroll
+- Bottom navigation for key actions
+- Easy thumb reach for primary CTAs
+
+---
+
+This user journey covers all critical flows from registration to daily usage. Test each flow on actual mobile devices!

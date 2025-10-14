@@ -1,0 +1,265 @@
+# 🚀 KATALOGKU - PROJECT SETUP GUIDE
+
+## Quick Overview
+
+**Project Name:** KatalogKu - Link-in-Bio Platform  
+**Target:** Indonesian sellers & resellers  
+**Timeline:** 3 weeks MVP  
+**Budget:** < Rp 1 juta  
+**Tech Stack:** Laravel 11 + VueJS 3 + MySQL 8.0
+
+---
+
+## 📋 Pre-Development Checklist
+
+### 1. Claude Project Setup
+- [ ] Create new Claude Project: "KatalogKu - Link-in-Bio Platform"
+- [ ] Add project description (see below)
+- [ ] Copy custom instructions from document `01-Custom-Instructions.md`
+- [ ] Upload all knowledge base documents (02-15)
+
+### 2. Development Environment
+- [ ] PHP 8.2+ installed
+- [ ] Composer 2.x installed
+- [ ] Node.js 18+ & NPM installed
+- [ ] MySQL 8.0 installed
+- [ ] Git installed
+- [ ] VSCode + extensions (PHP Intelephense, Volar, Tailwind CSS IntelliSense)
+
+### 3. External Services
+- [ ] Zenziva account (SMS OTP) - https://zenziva.com
+- [ ] Get API Key & Secret
+- [ ] Test OTP in sandbox mode
+- [ ] Niagahoster account (hosting) - https://niagahoster.com
+- [ ] Domain registration (katalogku.id)
+
+### 4. Local Setup
+```bash
+# Backend (Laravel)
+composer create-project laravel/laravel katalogku-api
+cd katalogku-api
+composer require intervention/image
+php artisan storage:link
+
+# Frontend (VueJS)
+npm create vue@latest katalogku-frontend
+cd katalogku-frontend
+npm install
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+```
+
+---
+
+## 📁 Project Structure
+
+```
+katalogku/
+├── katalogku-api/          # Laravel backend
+│   ├── app/
+│   │   ├── Http/Controllers/Api/
+│   │   ├── Models/
+│   │   ├── Services/
+│   │   └── Helpers/
+│   ├── database/
+│   │   ├── migrations/
+│   │   └── seeders/
+│   ├── routes/api.php
+│   └── .env
+│
+├── katalogku-frontend/     # VueJS frontend
+│   ├── src/
+│   │   ├── pages/
+│   │   ├── components/
+│   │   ├── stores/
+│   │   ├── services/
+│   │   ├── router/
+│   │   └── assets/
+│   ├── public/
+│   └── .env
+│
+└── docs/                   # This documentation
+    ├── 00-Project-Setup-Guide.md
+    ├── 01-Custom-Instructions.md
+    ├── 02-PRD.md
+    ├── 03-Database-Schema.md
+    └── ...
+```
+
+---
+
+## 🎯 Development Phases
+
+### Phase 1: Foundation (Week 1)
+**Goal:** Database + Auth + Basic CRUD
+
+**Tasks:**
+1. Database migrations
+2. SMS OTP authentication
+3. User registration flow
+4. Catalog & Product models
+5. Image upload with compression
+
+**Deliverable:** Backend API ready
+
+---
+
+### Phase 2: Frontend (Week 2)
+**Goal:** Dashboard + Public Catalog
+
+**Tasks:**
+1. VueJS setup with routing
+2. Authentication pages (OTP flow)
+3. Dashboard with product management
+4. Public catalog view
+5. Category filtering
+
+**Deliverable:** Full working app locally
+
+---
+
+### Phase 3: Deploy & Launch (Week 3)
+**Goal:** Production ready
+
+**Tasks:**
+1. Shared hosting deployment
+2. Domain configuration
+3. SSL certificate
+4. Production testing
+5. Soft launch to 50 users
+
+**Deliverable:** Live at katalogku.id
+
+---
+
+## 🔑 Environment Variables
+
+### Backend (.env)
+```env
+APP_NAME=KatalogKu
+APP_ENV=production
+APP_URL=https://katalogku.id
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_DATABASE=katalogku
+DB_USERNAME=root
+DB_PASSWORD=
+
+FILESYSTEM_DISK=public
+MAX_UPLOAD_SIZE=10240
+
+# Zenziva SMS OTP
+ZENZIVA_API_KEY=your_api_key
+ZENZIVA_API_SECRET=your_api_secret
+ZENZIVA_SANDBOX=false
+
+# Laravel Sanctum
+SANCTUM_STATEFUL_DOMAINS=localhost:5173,katalogku.id
+SESSION_DOMAIN=.katalogku.id
+
+# Rate Limiting
+OTP_RATE_LIMIT=3
+OTP_RATE_LIMIT_MINUTES=60
+```
+
+### Frontend (.env)
+```env
+VITE_API_URL=https://katalogku.id/api
+VITE_APP_NAME=KatalogKu
+VITE_PUBLIC_URL=https://katalogku.id
+```
+
+---
+
+## 📊 Success Metrics
+
+### Technical Metrics
+- API response time: < 500ms
+- Public catalog load: < 2s
+- Image upload + compression: < 5s
+- Dashboard load: < 3s
+- Mobile score (Lighthouse): > 90
+
+### Business Metrics
+- Week 2: 100 registered users
+- Week 4: 500 users, 10% active (50 with 5+ products)
+- Week 6: 1,000 users, 5% PRO conversion (50 paying)
+- Month 6: 10,000 users, 8% PRO (800 paying = Rp 31.2jt MRR)
+
+---
+
+## 🐛 Common Issues & Solutions
+
+### Issue: Image compression too slow
+**Solution:** Use queue jobs for async processing
+```php
+dispatch(new CompressProductImage($product));
+```
+
+### Issue: OTP not received
+**Solutions:**
+1. Check Zenziva balance
+2. Verify phone number format (08xxx)
+3. Check sandbox mode disabled
+4. Rate limit exceeded?
+
+### Issue: CORS errors
+**Solution:** Update `config/cors.php`
+```php
+'paths' => ['api/*'],
+'allowed_origins' => ['http://localhost:5173', 'https://katalogku.id'],
+'supports_credentials' => true,
+```
+
+### Issue: Storage symlink not working on shared hosting
+**Solution:** Manual symlink via cPanel or FTP
+```
+public_html/storage -> ../../storage/app/public
+```
+
+---
+
+## 📞 Support & Resources
+
+- **Laravel Docs:** https://laravel.com/docs
+- **VueJS Docs:** https://vuejs.org/guide
+- **Intervention Image:** http://image.intervention.io
+- **Zenziva API:** https://zenziva.com/dokumentasi
+- **Tailwind CSS:** https://tailwindcss.com/docs
+
+---
+
+## ✅ Go-Live Checklist
+
+### Pre-Launch
+- [ ] All features tested locally
+- [ ] Database seeded with sample data
+- [ ] OTP working in production
+- [ ] Image compression optimized
+- [ ] Public catalog loads < 2s
+- [ ] Mobile responsive tested
+- [ ] WhatsApp links working
+- [ ] Analytics tracking implemented
+
+### Launch Day
+- [ ] Deploy to production
+- [ ] DNS configured
+- [ ] SSL active (https)
+- [ ] Database migrated
+- [ ] Cron jobs configured
+- [ ] Monitoring setup
+- [ ] Backup system active
+- [ ] Landing page live
+
+### Post-Launch
+- [ ] Monitor error logs
+- [ ] Check OTP delivery rate
+- [ ] Track user registrations
+- [ ] Collect user feedback
+- [ ] Fix critical bugs within 24h
+- [ ] Plan iteration based on data
+
+---
+
+**Next Step:** Read `01-Custom-Instructions.md` and set up your Claude Project!

@@ -1,6 +1,6 @@
 import { ref, watch, onMounted } from 'vue'
 
-const THEME_KEY = 'katalogku_theme'
+const THEME_KEY = 'kaitkan_theme'
 const isDark = ref(false)
 
 export function useTheme() {

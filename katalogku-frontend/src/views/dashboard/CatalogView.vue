@@ -19,7 +19,7 @@
           v-model="form.username"
           label="Username"
           placeholder="contoh: bajusarah (huruf kecil, angka, dash, underscore)"
-          hint="Link katalog Anda akan menjadi: katalogku.com/c/username"
+          hint="Link katalog Anda akan menjadi: kaitkan.id/c/username"
           :error="validation.getError('username')"
           required
           @blur="validateUsername"

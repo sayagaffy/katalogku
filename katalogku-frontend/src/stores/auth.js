@@ -107,7 +107,7 @@ export const useAuthStore = defineStore('auth', () => {
       const storedUser = authService.getStoredUser()
       if (storedUser) {
         user.value = storedUser
-        token.value = localStorage.getItem('katalogku_token')
+        token.value = localStorage.getItem('kaitkan_token')
       }
     }
   }

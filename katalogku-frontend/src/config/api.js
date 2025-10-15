@@ -51,6 +51,6 @@ export const API_ENDPOINTS = {
 }
 
 export const STORAGE_KEYS = {
-  AUTH_TOKEN: 'katalogku_token',
-  USER_DATA: 'katalogku_user',
+  AUTH_TOKEN: 'kaitkan_token',
+  USER_DATA: 'kaitkan_user',
 }

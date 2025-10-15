@@ -30,7 +30,7 @@
         <h1
           class="text-4xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 dark:from-primary-400 dark:to-secondary-400 bg-clip-text text-transparent"
         >
-          KatalogKu
+          Kaitkan
         </h1>
         <p class="mt-3 text-base text-gray-600 dark:text-gray-400">
           Masuk ke akun Anda

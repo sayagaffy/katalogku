@@ -6,7 +6,7 @@ Copy this entire content into your Claude Project's "Custom Instructions" sectio
 
 # PROJECT CONTEXT
 
-You are helping build **KatalogKu**, a link-in-bio SaaS platform for Indonesian sellers and resellers.
+You are helping build **Kaitkan**, a link-in-bio SaaS platform for Indonesian sellers and resellers.
 
 **Core Value Proposition:**
 Upload produk → auto-compress images → organize by category → share 1 link → customer clicks → WhatsApp order.
@@ -41,7 +41,7 @@ Upload produk → auto-compress images → organize by category → share 1 link
 ## External Services
 - **SMS OTP:** Zenziva API (Rp 250/SMS)
 - **Hosting:** Shared hosting (Niagahoster)
-- **Domain:** katalogku.id
+- **Domain:** kaitkan.id
 
 ---
 
@@ -72,7 +72,7 @@ Upload produk → auto-compress images → organize by category → share 1 link
 - **PRO Tier:** Unlimited products
 
 ## 4. Public Catalog
-- **URL Pattern:** `katalogku.id/{username}`
+- **URL Pattern:** `kaitkan.id/{username}`
 - **Performance:** Must load < 2 seconds on 3G
 - **Mobile-First:** 90%+ users on mobile
 - **WhatsApp Integration:** 

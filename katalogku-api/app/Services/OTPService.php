@@ -105,7 +105,7 @@ class OTPService
         $phone = $this->formatPhoneNumberForWebSMS($whatsapp);
 
         // Pesan tanpa kata-kata terlarang (Token, OTP, Kode, Verifikasi, dll)
-        $message = "Sandi masuk KatalogKu Anda: {$code}\nBerlaku 5 menit.\nJangan bagikan ke siapapun.";
+        $message = "Sandi masuk Kaitkan Anda: {$code}\nBerlaku 5 menit.\nJangan bagikan ke siapapun.";
 
         try {
             // WebSMS menggunakan GET request dengan parameter di URL

@@ -71,7 +71,7 @@
           size="lg"
           full-width
           :loading="isLoading"
-          :disabled="validation.hasErrors || isLoading"
+          :disabled="isLoading"
         >
           Masuk
         </BaseButton>
@@ -132,24 +132,60 @@ function validatePassword() {
 }
 
 async function handleLogin() {
+  console.log('=== Login Started ===')
+  console.log('Form data:', { whatsapp: form.whatsapp, password: '***' })
+
+  // Clear previous errors
+  validation.clearAllErrors()
+
   // Validate all fields
   validateWhatsapp()
   validatePassword()
 
-  if (validation.hasErrors) {
+  console.log('Validation errors:', validation.errors.value)
+  console.log('Has errors:', validation.hasErrors.value)
+
+  if (validation.hasErrors.value) {
+    console.log('Validation failed, stopping login')
     return
   }
+
+  console.log('Validation passed, proceeding with login...')
 
   isLoading.value = true
   errorMessage.value = ''
 
   try {
-    await authStore.login(form.whatsapp, form.password)
+    console.log('Calling authStore.login...')
+    const response = await authStore.login(form.whatsapp, form.password)
+    console.log('Login response:', response)
+
+    console.log('Login successful, redirecting to dashboard...')
     router.push('/dashboard')
   } catch (error) {
-    errorMessage.value = error || 'Login gagal. Silakan coba lagi.'
+    console.error('Login error:', error)
+    console.error('Error type:', typeof error)
+    console.error('Error details:', {
+      message: error?.message,
+      response: error?.response,
+      toString: error?.toString?.()
+    })
+
+    // Handle different error types
+    if (typeof error === 'string') {
+      errorMessage.value = error
+    } else if (error?.message) {
+      errorMessage.value = error.message
+    } else if (error?.response?.data?.message) {
+      errorMessage.value = error.response.data.message
+    } else {
+      errorMessage.value = 'Login gagal. Silakan coba lagi.'
+    }
+
+    console.log('Final error message:', errorMessage.value)
   } finally {
     isLoading.value = false
+    console.log('=== Login Ended ===')
   }
 }
 </script>

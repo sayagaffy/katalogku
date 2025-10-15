@@ -41,6 +41,7 @@ export const API_ENDPOINTS = {
     UPDATE: (id) => `/products/${id}`,
     DELETE: (id) => `/products/${id}`,
     REORDER: '/products/reorder',
+    TRACK_CLICK: (id) => `/clicks/${id}`,
   },
   // Analytics
   ANALYTICS: {

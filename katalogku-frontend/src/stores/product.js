@@ -53,7 +53,9 @@ export const useProductStore = defineStore('product', () => {
       // Append text fields
       Object.keys(data).forEach((key) => {
         if (data[key] !== null && data[key] !== undefined && key !== 'image') {
-          formData.append(key, data[key])
+          // Convert boolean to 1/0 for FormData
+          const value = typeof data[key] === 'boolean' ? (data[key] ? 1 : 0) : data[key]
+          formData.append(key, value)
         }
       })
 
@@ -85,7 +87,9 @@ export const useProductStore = defineStore('product', () => {
       // Append text fields
       Object.keys(data).forEach((key) => {
         if (data[key] !== null && data[key] !== undefined && key !== 'image') {
-          formData.append(key, data[key])
+          // Convert boolean to 1/0 for FormData
+          const value = typeof data[key] === 'boolean' ? (data[key] ? 1 : 0) : data[key]
+          formData.append(key, value)
         }
       })
 

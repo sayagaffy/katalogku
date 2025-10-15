@@ -192,21 +192,31 @@ function handleImageChange({ file, error }) {
 }
 
 async function handleSubmit() {
+  console.log('=== Product Submit Started ===')
+  console.log('Is Edit:', isEdit.value)
+  console.log('Form data:', { ...form, image: form.image ? (form.image instanceof File ? 'FILE' : 'URL') : null })
+
   // Validate required fields
   validateName()
   validatePrice()
 
+  console.log('Validation errors:', validation.errors.value)
+  console.log('Has errors:', validation.hasErrors.value)
+
   if (!form.category) {
+    console.log('Error: Category not selected')
     errorMessage.value = 'Kategori harus dipilih'
     return
   }
 
   if (!isEdit.value && !form.image) {
+    console.log('Error: Image not uploaded (create mode)')
     errorMessage.value = 'Gambar produk harus diupload'
     return
   }
 
-  if (validation.hasErrors) {
+  if (validation.hasErrors.value) {
+    console.log('Error: Validation failed')
     return
   }
 
@@ -214,13 +224,18 @@ async function handleSubmit() {
   errorMessage.value = ''
 
   try {
+    console.log('Calling productStore...')
     if (isEdit.value) {
+      console.log('Update product:', props.product.id)
       await productStore.updateProduct(props.product.id, form)
     } else {
+      console.log('Create product')
       await productStore.createProduct(form)
     }
+    console.log('Product saved successfully')
     emit('saved')
   } catch (error) {
+    console.error('Product save error:', error)
     errorMessage.value = error || 'Gagal menyimpan produk. Silakan coba lagi.'
   } finally {
     isLoading.value = false

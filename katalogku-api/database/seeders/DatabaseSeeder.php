@@ -11,9 +11,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Call our dedicated seeders
+        // Call our dedicated seeders in order
         $this->call([
             UserSeeder::class,
+            CatalogSeeder::class,
+            ProductSeeder::class,
         ]);
     }
 }

@@ -35,11 +35,33 @@ apiClient.interceptors.response.use(
       // Server responded with error
       const { status, data } = error.response
 
+      // Log full error response for debugging
+      console.error('API Error Response:', {
+        status,
+        data,
+        url: error.config?.url,
+        method: error.config?.method,
+      })
+
       // Handle 401 Unauthorized - redirect to login
       if (status === 401) {
         localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN)
         localStorage.removeItem(STORAGE_KEYS.USER_DATA)
         window.location.href = '/login'
+      }
+
+      // For validation errors (422), return full error object
+      if (status === 422 && data?.errors) {
+        const errorObj = {
+          message: data.message || 'Validasi gagal',
+          errors: data.errors,
+        }
+        return Promise.reject(errorObj)
+      }
+
+      // For 500 errors with debug info, include error details
+      if (status === 500 && data?.error) {
+        return Promise.reject(data.message + ': ' + data.error)
       }
 
       // Return error message from server

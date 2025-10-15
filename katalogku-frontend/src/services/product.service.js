@@ -63,4 +63,13 @@ export const productService = {
   async reorderProducts(products) {
     return await apiClient.post(API_ENDPOINTS.PRODUCTS.REORDER, { products })
   },
+
+  /**
+   * Track product click (for analytics)
+   * @param {number} id - Product ID
+   * @returns {Promise}
+   */
+  async trackClick(id) {
+    return await apiClient.post(API_ENDPOINTS.PRODUCTS.TRACK_CLICK(id))
+  },
 }

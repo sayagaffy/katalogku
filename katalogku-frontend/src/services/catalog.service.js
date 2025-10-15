@@ -16,7 +16,7 @@ export const catalogService = {
    * @returns {Promise}
    */
   async saveCatalog(formData) {
-    return await apiClient.post(API_ENDPOINTS.CATALOG.UPDATE, formData, {
+    return await apiClient.post(API_ENDPOINTS.CATALOG.GET, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

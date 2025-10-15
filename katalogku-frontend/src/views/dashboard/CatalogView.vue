@@ -99,7 +99,7 @@
         </div>
 
         <!-- Error Message -->
-        <div v-if="errorMessage" class="rounded-md bg-red-50 p-4">
+        <div v-if="errorMessage" class="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 animate-slide-down">
           <div class="flex">
             <div class="flex-shrink-0">
               <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
@@ -107,7 +107,15 @@
               </svg>
             </div>
             <div class="ml-3">
-              <p class="text-sm text-red-800">{{ errorMessage }}</p>
+              <p class="text-sm font-semibold text-red-800 dark:text-red-300">{{ errorMessage }}</p>
+              <div v-if="Object.keys(validation.errors.value).length > 0" class="mt-2 text-xs text-red-700 dark:text-red-400">
+                <p class="font-semibold mb-1">Detail error:</p>
+                <ul class="list-disc list-inside space-y-1">
+                  <li v-for="(error, field) in validation.errors.value" :key="field">
+                    <strong>{{ field }}:</strong> {{ error }}
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
@@ -125,7 +133,7 @@
             variant="primary"
             size="lg"
             :loading="isLoading"
-            :disabled="validation.hasErrors || isLoading"
+            :disabled="isLoading"
           >
             {{ isEdit ? 'Perbarui Katalog' : 'Buat Katalog' }}
           </BaseButton>
@@ -210,23 +218,54 @@ function handleAvatarChange({ file, error }) {
 }
 
 async function handleSubmit() {
+  console.log('=== Catalog Submit Started ===')
+  console.log('Form data:', { ...form, avatar: form.avatar ? 'FILE' : null })
+
   // Validate all fields
   validateName()
   validateUsername()
   validateWhatsapp()
 
-  if (validation.hasErrors) {
+  console.log('Validation errors:', validation.errors.value)
+  console.log('Has errors:', validation.hasErrors.value)
+
+  if (validation.hasErrors.value) {
+    console.log('Validation failed, stopping submit')
     return
   }
 
   isLoading.value = true
   errorMessage.value = ''
+  validation.clearAllErrors()
 
   try {
-    await catalogStore.saveCatalog(form)
+    console.log('Calling catalogStore.saveCatalog...')
+    const response = await catalogStore.saveCatalog(form)
+    console.log('Catalog saved successfully:', response)
     router.push('/dashboard')
   } catch (error) {
-    errorMessage.value = error || 'Gagal menyimpan katalog. Silakan coba lagi.'
+    console.error('Catalog save error:', error)
+    console.error('Error type:', typeof error)
+    console.error('Error keys:', error && typeof error === 'object' ? Object.keys(error) : 'N/A')
+
+    // Handle structured validation errors from backend
+    if (error && typeof error === 'object' && error.errors) {
+      console.log('Backend validation errors:', error.errors)
+      console.log('Backend validation errors (stringified):', JSON.stringify(error.errors, null, 2))
+      errorMessage.value = error.message || 'Validasi gagal'
+
+      // Set individual field errors
+      Object.keys(error.errors).forEach((field) => {
+        const fieldErrors = error.errors[field]
+        const errorMsg = Array.isArray(fieldErrors) ? fieldErrors[0] : fieldErrors
+        console.log(`Field "${field}" error:`, errorMsg)
+        validation.setError(field, errorMsg)
+      })
+    } else {
+      // Simple string error
+      console.log('Simple error, no structured errors object')
+      errorMessage.value = typeof error === 'string' ? error : 'Gagal menyimpan katalog. Silakan coba lagi.'
+    }
   } finally {
     isLoading.value = false
   }

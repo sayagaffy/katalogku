@@ -1,18 +1,19 @@
 <template>
   <div class="image-upload">
-    <label v-if="label" class="block text-sm font-medium text-gray-700 mb-2">
+    <label v-if="label" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
       {{ label }}
-      <span v-if="required" class="text-red-500">*</span>
+      <span v-if="required" class="text-red-500 dark:text-red-400">*</span>
     </label>
 
     <!-- Preview Area -->
     <div
       class="upload-area"
       :class="{
-        'border-red-300': error,
-        'border-blue-500': isDragging,
-        'border-gray-300': !isDragging && !error,
+        'border-red-300 dark:border-red-700': error,
+        'border-blue-500 dark:border-blue-400': isDragging,
+        'border-gray-300 dark:border-gray-600': !isDragging && !error,
       }"
+      @click="!disabled && !previewUrl && fileInput?.click()"
       @dragover.prevent="handleDragOver"
       @dragleave.prevent="handleDragLeave"
       @drop.prevent="handleDrop"
@@ -46,10 +47,12 @@
             d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
           />
         </svg>
-        <p class="mt-2 text-sm text-gray-600">
-          <span class="font-semibold">Klik untuk upload</span> atau drag & drop
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <span class="font-semibold text-primary-600 dark:text-primary-400">Klik untuk upload</span> atau drag & drop
         </p>
-        <p class="text-xs text-gray-500 mt-1">{{ hint || 'PNG, JPG, WebP maksimal 10MB' }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">
+          {{ hint || 'PNG, JPG, WebP maksimal 10MB' }}
+        </p>
       </div>
 
       <!-- Hidden File Input -->
@@ -221,14 +224,24 @@ defineExpose({ click })
   justify-content: center;
   min-height: 200px;
   border: 2px dashed;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
+  background-color: #ffffff;
+}
+
+.dark .upload-area {
+  background-color: #111827;
 }
 
 .upload-area:hover {
-  border-color: #3b82f6;
-  background-color: #eff6ff;
+  border-color: #0ea5e9;
+  background-color: #f0f9ff;
+}
+
+.dark .upload-area:hover {
+  border-color: #38bdf8;
+  background-color: #0c4a6e;
 }
 
 .preview-container {
@@ -278,5 +291,9 @@ defineExpose({ click })
   height: 3rem;
   margin: 0 auto;
   color: #9ca3af;
+}
+
+.dark .upload-icon {
+  color: #6b7280;
 }
 </style>

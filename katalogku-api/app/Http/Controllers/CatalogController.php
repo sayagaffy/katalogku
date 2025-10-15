@@ -58,12 +58,20 @@ class CatalogController extends Controller
     public function store(Request $request): JsonResponse
     {
         try {
+            $catalogId = $request->user()->catalog->id ?? null;
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|min:3|max:100',
-                'username' => 'required|string|min:3|max:50|regex:/^[a-z0-9_-]+$/|unique:catalogs,username,' . ($request->user()->catalog->id ?? 'NULL'),
+                'username' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'regex:/^[a-z0-9_-]+$/',
+                    'unique:catalogs,username,' . $catalogId,
+                ],
                 'description' => 'nullable|string|max:500',
                 'category' => 'nullable|string|max:50',
-                'whatsapp' => 'nullable|string|regex:/^(08|628|\+628)[0-9]{8,12}$/',
+                'whatsapp' => 'nullable|string|min:10|max:15',
                 'avatar' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:10240',
                 'theme' => 'nullable|string|in:default,blue,green,purple,pink',
                 'is_published' => 'nullable|boolean',

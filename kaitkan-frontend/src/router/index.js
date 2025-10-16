@@ -70,6 +70,12 @@ const router = createRouter({
       name: 'public-catalog',
       component: () => import('@/views/public/PublicCatalogView.vue'),
     },
+    // Public product detail
+    {
+      path: '/c/:username/p/:productId',
+      name: 'public-product-detail',
+      component: () => import('@/views/public/PublicProductDetailView.vue'),
+    },
     // 404 Not Found
     {
       path: '/:pathMatch(.*)*',

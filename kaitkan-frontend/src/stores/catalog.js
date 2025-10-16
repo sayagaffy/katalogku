@@ -41,8 +41,8 @@ export const useCatalogStore = defineStore('catalog', () => {
         }
       })
 
-      // Append avatar file if exists
-      if (data.avatar instanceof File) {
+      // Append avatar file if exists (guard for SSR/build-time environments)
+      if (typeof window !== 'undefined' && data.avatar instanceof window.File) {
         formData.append('avatar', data.avatar)
       }
 

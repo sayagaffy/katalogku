@@ -73,6 +73,31 @@
 
       <!-- Products Grid -->
       <div class="max-w-6xl mx-auto px-4 py-8">
+        <!-- Search & Filters -->
+        <div class="mb-6">
+          <div class="flex flex-col sm:flex-row gap-3">
+            <div class="flex-1 relative">
+              <input
+                v-model="searchQuery"
+                type="text"
+                :placeholder="`Cari di ${catalog.name}`"
+                class="w-full h-11 rounded-xl pl-11 pr-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 103.5 10.5a7.5 7.5 0 0013.15 6.15z" />
+              </svg>
+            </div>
+            <div class="sm:w-64">
+              <select
+                v-model="selectedCategory"
+                class="w-full h-11 rounded-xl px-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="">Semua Kategori</option>
+                <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
         <!-- Empty State -->
         <div v-if="!catalog.products || catalog.products.length === 0" class="text-center py-12">
           <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,11 +108,11 @@
         </div>
 
         <!-- Products List -->
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
           <div
-            v-for="product in catalog.products"
+            v-for="product in filteredProducts"
             :key="product.id"
-            @click="handleProductClick(product)"
+            @click="openProductDetail(product)"
             class="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-lg transition-shadow cursor-pointer overflow-hidden group"
           >
             <!-- Product Image -->
@@ -103,17 +128,17 @@
             </div>
 
             <!-- Product Info -->
-            <div class="p-4">
-              <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">
+            <div class="p-3 sm:p-4">
+              <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-1 sm:mb-2 line-clamp-2 text-sm sm:text-base">
                 {{ product.name }}
               </h3>
-              <p class="text-2xl font-bold text-primary-600 dark:text-primary-400 mb-2">
+              <p class="text-lg sm:text-2xl font-bold text-primary-600 dark:text-primary-400 mb-1 sm:mb-2">
                 {{ formatPrice(product.price) }}
               </p>
-              <p v-if="product.description" class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
+              <p v-if="product.description" class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-2 sm:mb-3">
                 {{ product.description }}
               </p>
-              <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-500">
+              <div class="flex items-center justify-between text-[10px] sm:text-xs text-gray-500 dark:text-gray-500">
                 <span>{{ product.view_count || 0 }} views</span>
                 <span>{{ product.click_count || 0 }} clicks</span>
               </div>
@@ -134,7 +159,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useCatalogStore } from '@/stores/catalog'
 import { productService } from '@/services/product.service'
 import { formatPrice } from '@/utils/helpers'
@@ -144,12 +169,30 @@ import { useWhatsApp } from '@/composables/useWhatsApp'
 const siteUrl = import.meta.env.VITE_PUBLIC_URL || window.location.origin
 
 const route = useRoute()
+const router = useRouter()
 const catalogStore = useCatalogStore()
 const { generateOrderLink, trackClick } = useWhatsApp()
 
 const catalog = ref(null)
 const isLoading = ref(true)
 const error = ref(null)
+// search & filter
+const searchQuery = ref('')
+const selectedCategory = ref('')
+const categories = computed(() => {
+  const list = catalog.value?.products?.map(p => p.category).filter(Boolean) || []
+  return Array.from(new Set(list))
+})
+const filteredProducts = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  const cat = selectedCategory.value
+  const items = catalog.value?.products || []
+  return items.filter(p => {
+    const matchQ = !q || `${p.name} ${p.description || ''}`.toLowerCase().includes(q)
+    const matchCat = !cat || p.category === cat
+    return matchQ && matchCat
+  })
+})
 
 const username = computed(() => route.params.username)
 
@@ -199,6 +242,14 @@ async function handleProductClick(product) {
   } catch (err) {
     console.error('Error tracking click:', err)
   }
+}
+
+function openProductDetail(product) {
+  router.push({
+    name: 'public-product-detail',
+    params: { username: username.value, productId: product.id },
+    state: { product, catalog: catalog.value },
+  })
 }
 
 onMounted(() => {

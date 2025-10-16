@@ -111,7 +111,9 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem('kaitkan_token', oldToken)
         localStorage.setItem('kaitkan_user', oldUser)
       }
-    } catch (_) {}
+    } catch (e) {
+      console.debug('migrate legacy auth keys failed', e)
+    }
 
     // Load auth data from localStorage on app start
     if (authService.isAuthenticated()) {

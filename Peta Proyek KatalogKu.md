@@ -1,12 +1,12 @@
-# 🗺️ Peta Proyek KatalogKu: Panduan Lengkap untuk AI Assistant
+# 🗺️ Peta Proyek Kaitkan: Panduan Lengkap untuk AI Assistant
 
-Dokumen ini adalah ringkasan utama dan panduan komprehensif untuk membangun platform SaaS **KatalogKu**. Semua informasi di bawah ini disarikan dari dokumen-dokumen proyek yang telah disediakan. Gunakan ini sebagai referensi utama untuk setiap permintaan pembuatan kode.
+Dokumen ini adalah ringkasan utama dan panduan komprehensif untuk membangun platform SaaS **Kaitkan**. Semua informasi di bawah ini disarikan dari dokumen-dokumen proyek yang telah disediakan. Gunakan ini sebagai referensi utama untuk setiap permintaan pembuatan kode.
 
 ---
 
 ## 1. Visi & Konsep Inti Proyek
 
-* [cite_start]**Nama Produk:** KatalogKu [cite: 149]
+* [cite_start]**Nama Produk:** Kaitkan [cite: 149]
 * [cite_start]**Tagline:** "Link di Bio = Katalog Cantik" [cite: 149]
 * [cite_start]**Visi:** Memberdayakan 13,5 juta penjual di media sosial Indonesia untuk mengubah pengikut menjadi pelanggan melalui katalog produk yang dioptimalkan untuk seluler dan dapat diakses melalui satu tautan. [cite: 149]
 * [cite_start]**Masalah yang Diselesaikan:** Mengatasi keterbatasan satu tautan di bio media sosial, proses pemesanan manual yang rumit, dan kurangnya analisis produk bagi penjual di Indonesia. [cite: 150]
@@ -59,7 +59,7 @@ Dokumen ini adalah ringkasan utama dan panduan komprehensif untuk membangun plat
 * [cite_start]**Kategori Produk:** `elektronik`, `fashion`, `makanan`, `kecantikan`, `rumah_tangga`, `lainnya`. [cite: 135, 192]
 
 ### Halaman Katalog Publik
-* [cite_start]**URL:** `katalogku.id/{username}` [cite: 192]
+* [cite_start]**URL:** `kaitkan.id/{username}` [cite: 192]
 * [cite_start]**Performa Kritis:** Halaman **wajib dimuat dalam < 2 detik** pada jaringan 3G. [cite: 167, 192]
 * [cite_start]**Desain:** Wajib **Mobile-First**, karena 90%+ pengguna akan mengakses dari perangkat seluler. [cite: 192]
 * [cite_start]**Integrasi WhatsApp:** Tombol "Order" akan langsung membuka WhatsApp dengan pesan yang sudah terisi format: `"Halo kak, mau order {Nama Produk} - Rp {Harga}"`. [cite: 192]

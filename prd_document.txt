@@ -1,8 +1,8 @@
-# PRODUCT REQUIREMENTS DOCUMENT - KATALOGKU
+# PRODUCT REQUIREMENTS DOCUMENT - KAITKAN
 
 ## Executive Summary
 
-**Product Name:** KatalogKu  
+**Product Name:** Kaitkan  
 **Tagline:** "Link di Bio = Katalog Cantik"  
 **Category:** SaaS, Link-in-Bio, Social Commerce Tools  
 **Target Market:** Indonesian sellers & resellers on social media  
@@ -152,7 +152,7 @@ A link-in-bio platform that creates mobile-optimized product catalogs with:
 
 2. **Catalog Setup**
    - Create 1 catalog per user
-   - Choose username (katalogku.id/{username})
+   - Choose username (kaitkan.id/{username})
    - Add catalog name & description
    - Select category (optional)
 
@@ -192,8 +192,8 @@ A link-in-bio platform that creates mobile-optimized product catalogs with:
    - Duplicate product feature
 
 8. **Custom Branding**
-   - Custom domain (tokoku.katalogku.id)
-   - Remove "Powered by KatalogKu" watermark
+   - Custom domain (tokoku.kaitkan.id)
+   - Remove "Powered by Kaitkan" watermark
    - Upload custom logo/avatar
    - Custom color scheme
 
@@ -371,7 +371,7 @@ Acceptance Criteria:
 ## Success Metrics
 
 ### North Star Metric
-**"Number of WhatsApp conversations initiated through KatalogKu catalogs"**
+**"Number of WhatsApp conversations initiated through Kaitkan catalogs"**
 
 ### Key Performance Indicators (KPIs)
 
@@ -529,7 +529,7 @@ Acceptance Criteria:
 
 ## Conclusion
 
-KatalogKu addresses a clear pain point for 13.5 million Indonesian social media sellers. With a focused MVP, strong Indonesia-specific features (WhatsApp, SMS OTP, mobile-first), and affordable pricing, we can capture meaningful market share in an underserved segment.
+Kaitkan addresses a clear pain point for 13.5 million Indonesian social media sellers. With a focused MVP, strong Indonesia-specific features (WhatsApp, SMS OTP, mobile-first), and affordable pricing, we can capture meaningful market share in an underserved segment.
 
 **Next Steps:**
 1. ✅ Complete technical documentation

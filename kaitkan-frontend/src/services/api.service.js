@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { API_BASE_URL, API_PREFIX, STORAGE_KEYS } from '@/config/api'
+import router from '@/router'
 
 // Create axios instance
 const apiClient = axios.create({
@@ -43,11 +44,34 @@ apiClient.interceptors.response.use(
         method: error.config?.method,
       })
 
-      // Handle 401 Unauthorized - redirect to login
+      // Handle 401 Unauthorized - redirect to login (SPA-safe)
       if (status === 401) {
         localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN)
         localStorage.removeItem(STORAGE_KEYS.USER_DATA)
-        window.location.href = '/login'
+
+        // Avoid redirect loops when already on auth pages or when the 401
+        // came from an auth endpoint (e.g., invalid login showing 401)
+        const currentPath = window.location?.pathname || ''
+        const reqUrl = (error.config?.url || '').toString()
+        const isAuthEndpoint = /^(\/)?auth\//.test(reqUrl.replace(/^\//, ''))
+        const isOnAuthPage = currentPath === '/login' || currentPath === '/register' || currentPath === '/verify-otp'
+
+        if (!isAuthEndpoint && !isOnAuthPage) {
+          try {
+            const to = '/login'
+            // Prefer SPA navigation to avoid full reload flicker
+            if (router && router.currentRoute?.value?.path !== to) {
+              router.push(to)
+            } else if (currentPath !== to) {
+              window.location.href = to
+            }
+          } catch (_) {
+            // Fallback to hard redirect if router not available
+            if (currentPath !== '/login') {
+              window.location.href = '/login'
+            }
+          }
+        }
       }
 
       // For validation errors (422), return full error object

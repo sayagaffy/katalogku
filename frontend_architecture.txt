@@ -1,4 +1,4 @@
-# FRONTEND ARCHITECTURE - KATALOGKU
+# FRONTEND ARCHITECTURE - KAITKAN
 
 ## Technology Stack
 
@@ -752,4 +752,4 @@ export default {
 
 ---
 
-This frontend architecture provides a solid foundation for building KatalogKu with maintainable, scalable Vue 3 code.
+This frontend architecture provides a solid foundation for building Kaitkan with maintainable, scalable Vue 3 code.

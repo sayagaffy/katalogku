@@ -1,8 +1,8 @@
-# 🚀 KATALOGKU - PROJECT SETUP GUIDE
+# 🚀 KAITKAN - PROJECT SETUP GUIDE
 
 ## Quick Overview
 
-**Project Name:** KatalogKu - Link-in-Bio Platform  
+**Project Name:** Kaitkan - Link-in-Bio Platform  
 **Target:** Indonesian sellers & resellers  
 **Timeline:** 3 weeks MVP  
 **Budget:** < Rp 1 juta  
@@ -13,7 +13,7 @@
 ## 📋 Pre-Development Checklist
 
 ### 1. Claude Project Setup
-- [ ] Create new Claude Project: "KatalogKu - Link-in-Bio Platform"
+- [ ] Create new Claude Project: "Kaitkan - Link-in-Bio Platform"
 - [ ] Add project description (see below)
 - [ ] Copy custom instructions from document `01-Custom-Instructions.md`
 - [ ] Upload all knowledge base documents (02-15)
@@ -31,7 +31,7 @@
 - [ ] Get API Key & Secret
 - [ ] Test OTP in sandbox mode
 - [ ] Niagahoster account (hosting) - https://niagahoster.com
-- [ ] Domain registration (katalogku.id)
+- [ ] Domain registration (kaitkan.id)
 
 ### 4. Local Setup
 ```bash
@@ -128,7 +128,7 @@ katalogku/
 4. Production testing
 5. Soft launch to 50 users
 
-**Deliverable:** Live at katalogku.id
+**Deliverable:** Live at kaitkan.id
 
 ---
 
@@ -136,13 +136,13 @@ katalogku/
 
 ### Backend (.env)
 ```env
-APP_NAME=KatalogKu
+APP_NAME=Kaitkan
 APP_ENV=production
-APP_URL=https://katalogku.id
+APP_URL=https://kaitkan.id
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
-DB_DATABASE=katalogku
+DB_DATABASE=kaitkan
 DB_USERNAME=root
 DB_PASSWORD=
 
@@ -155,8 +155,8 @@ ZENZIVA_API_SECRET=your_api_secret
 ZENZIVA_SANDBOX=false
 
 # Laravel Sanctum
-SANCTUM_STATEFUL_DOMAINS=localhost:5173,katalogku.id
-SESSION_DOMAIN=.katalogku.id
+SANCTUM_STATEFUL_DOMAINS=localhost:5173,kaitkan.id
+SESSION_DOMAIN=.kaitkan.id
 
 # Rate Limiting
 OTP_RATE_LIMIT=3
@@ -165,9 +165,9 @@ OTP_RATE_LIMIT_MINUTES=60
 
 ### Frontend (.env)
 ```env
-VITE_API_URL=https://katalogku.id/api
-VITE_APP_NAME=KatalogKu
-VITE_PUBLIC_URL=https://katalogku.id
+VITE_API_URL=https://kaitkan.id/api
+VITE_APP_NAME=Kaitkan
+VITE_PUBLIC_URL=https://kaitkan.id
 ```
 
 ---
@@ -208,7 +208,7 @@ dispatch(new CompressProductImage($product));
 **Solution:** Update `config/cors.php`
 ```php
 'paths' => ['api/*'],
-'allowed_origins' => ['http://localhost:5173', 'https://katalogku.id'],
+'allowed_origins' => ['http://localhost:5173', 'https://kaitkan.id'],
 'supports_credentials' => true,
 ```
 

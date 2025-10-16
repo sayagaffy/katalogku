@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Read(//Users/gaffy/Documents/Projects/KatalogKu/**)",
+      "Read(//Users/gaffy/Documents/Projects/Kaitkan/**)",
       "Bash(php artisan make:migration:*)",
       "Bash(php artisan migrate:fresh:*)",
       "Bash(php artisan:*)",

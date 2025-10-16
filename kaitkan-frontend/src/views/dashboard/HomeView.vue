@@ -76,19 +76,44 @@
       </div>
 
       <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center justify-between">
-          <div>
+        <div class="flex items-start justify-between gap-4">
+          <div class="min-w-0">
             <p class="text-sm text-gray-600">Link Katalog</p>
-            <p class="text-sm font-semibold text-blue-600 truncate">{{ catalogUrl }}</p>
+            <a
+              v-if="catalogUrl"
+              :href="catalogUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-sm font-semibold text-blue-600 hover:text-blue-700 underline underline-offset-2 truncate block"
+              :title="catalogUrl"
+            >
+              {{ catalogUrl }}
+            </a>
+            <p v-else class="text-sm text-gray-400">Belum ada username katalog</p>
           </div>
-          <button
-            @click="copyCatalogUrl"
-            class="p-3 bg-purple-100 rounded-full hover:bg-purple-200 transition-colors"
-          >
-            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              :disabled="!catalogUrl"
+              @click="openCatalog"
+              class="inline-flex items-center px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              title="Kunjungi link"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              <span class="ml-2 hidden sm:inline">Kunjungi</span>
+            </button>
+            <button
+              :disabled="!catalogUrl"
+              @click="copyCatalogUrl"
+              class="p-3 bg-purple-100 rounded-full hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Salin link"
+            >
+              <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -157,6 +182,11 @@ async function copyCatalogUrl() {
       alert('Link katalog berhasil disalin!')
     }
   }
+}
+
+function openCatalog() {
+  if (!catalogUrl.value) return
+  window.open(catalogUrl.value, '_blank', 'noopener,noreferrer')
 }
 
 onMounted(async () => {

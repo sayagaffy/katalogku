@@ -6,7 +6,15 @@ const isDark = ref(false)
 export function useTheme() {
   // Initialize theme from localStorage or system preference
   const initializeTheme = () => {
-    const savedTheme = localStorage.getItem(THEME_KEY)
+    let savedTheme = localStorage.getItem(THEME_KEY)
+    // Backward compat: migrate from old key if needed
+    if (!savedTheme) {
+      const legacy = localStorage.getItem('katalogku_theme')
+      if (legacy) {
+        savedTheme = legacy
+        localStorage.setItem(THEME_KEY, legacy)
+      }
+    }
 
     if (savedTheme) {
       isDark.value = savedTheme === 'dark'

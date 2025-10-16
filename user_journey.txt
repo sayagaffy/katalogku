@@ -1,4 +1,4 @@
-# USER JOURNEY - KATALOGKU
+# USER JOURNEY - KAITKAN
 
 ## Journey Overview
 
@@ -16,19 +16,19 @@ This document details the complete user journey from discovery to daily usage.
 ## 1. REGISTRATION FLOW
 
 ### Entry Points
-- Landing page (katalogku.id)
+- Landing page (kaitkan.id)
 - Social media ads
 - Friend referral
 - Blog post / tutorial
 
 ### Step 1: Landing Page
 
-**URL:** `https://katalogku.id/`
+**URL:** `https://kaitkan.id/`
 
 **Content:**
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏠 KATALOGKU
+🏠 KAITKAN
 Link di Bio = Katalog Cantik
 
 [Hero Image: Beautiful catalog example]
@@ -185,7 +185,7 @@ Contoh: Toko Baju Sarah
 2️⃣ Pilih Username Katalog
 
 Link katalog kamu:
-katalogku.id/[____________]
+kaitkan.id/[____________]
 
 Saran berdasarkan nama kamu:
 ☐ bajusarah
@@ -222,7 +222,7 @@ Status: ✅ "bajusarah" tersedia!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✨ Katalog Kamu Sudah Siap!
 
-🔗 katalogku.id/bajusarah
+🔗 kaitkan.id/bajusarah
 
 Langkah selanjutnya:
 1️⃣ Tambah produk pertama
@@ -260,7 +260,7 @@ Yuk tambah produk pertama kamu.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔗 LINK KATALOG
 
-katalogku.id/bajusarah
+kaitkan.id/bajusarah
 [📋 Salin Link] [👁️ Preview] [📱 Share WA]
 
 💡 Taruh link ini di bio IG/TikTok!
@@ -384,7 +384,7 @@ Filter: [Semua ▼] | Cari: [_______]
 ```
 User clicks [Salin Link] button
    ↓
-Copy to clipboard: https://katalogku.id/bajusarah
+Copy to clipboard: https://kaitkan.id/bajusarah
    ↓
 Toast notification: ✅ "Link berhasil disalin!"
    ↓
@@ -398,7 +398,7 @@ User clicks [Share WA] button
    ↓
 Open WhatsApp with pre-filled message:
 "Halo! Cek katalog produk aku di
-https://katalogku.id/bajusarah
+https://kaitkan.id/bajusarah
 
 Ada banyak produk keren nih! 😊"
 ```
@@ -414,7 +414,7 @@ Ada banyak produk keren nih! 😊"
 ```
 User in IG: @bajusarah
    ↓
-Click "katalogku.id/bajusarah" in bio
+Click "kaitkan.id/bajusarah" in bio
    ↓
 Open in browser
    ↓
@@ -425,7 +425,7 @@ Load public catalog page
 
 ### Step 2: Public Catalog View
 
-**URL:** `https://katalogku.id/bajusarah`
+**URL:** `https://kaitkan.id/bajusarah`
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -459,7 +459,7 @@ Load public catalog page
 └──────────┴──────────┘
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Powered by KatalogKu
+Powered by Kaitkan
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 

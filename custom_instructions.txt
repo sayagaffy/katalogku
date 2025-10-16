@@ -1,4 +1,4 @@
-# KATALOGKU - CLAUDE PROJECT CUSTOM INSTRUCTIONS
+# KAITKAN - CLAUDE PROJECT CUSTOM INSTRUCTIONS
 
 Copy this entire content into your Claude Project's "Custom Instructions" section.
 

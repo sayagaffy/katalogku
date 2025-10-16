@@ -1,4 +1,4 @@
-# DEVELOPMENT ROADMAP - KATALOGKU
+# DEVELOPMENT ROADMAP - KAITKAN
 
 ## Overview
 
@@ -23,8 +23,8 @@
 **Day 1 Morning: Laravel Backend Setup**
 ```bash
 # Create Laravel project
-composer create-project laravel/laravel katalogku-api
-cd katalogku-api
+composer create-project laravel/laravel kaitkan-api
+cd kaitkan-api
 
 # Install dependencies
 composer require intervention/image
@@ -232,8 +232,8 @@ php artisan make:controller Api/CatalogController
 **Day 8 Morning: VueJS Project Setup**
 ```bash
 # Create Vue project
-npm create vue@latest katalogku-frontend
-cd katalogku-frontend
+npm create vue@latest kaitkan-frontend
+cd kaitkan-frontend
 
 # Select options:
 # ✅ Vue Router
@@ -448,7 +448,7 @@ php artisan make:controller Api/AnalyticsController
 ```bash
 # Sign up for Niagahoster shared hosting
 # Create database via cPanel
-# Configure DNS for katalogku.id
+# Configure DNS for kaitkan.id
 # Point A record to hosting IP
 ```
 

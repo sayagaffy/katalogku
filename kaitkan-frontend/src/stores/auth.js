@@ -102,6 +102,17 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function initializeAuth() {
+    // Migrate old localStorage keys if present
+    try {
+      const oldToken = localStorage.getItem('katalogku_token')
+      const oldUser = localStorage.getItem('katalogku_user')
+      const hasNew = !!localStorage.getItem('kaitkan_token')
+      if (oldToken && oldUser && !hasNew) {
+        localStorage.setItem('kaitkan_token', oldToken)
+        localStorage.setItem('kaitkan_user', oldUser)
+      }
+    } catch (_) {}
+
     // Load auth data from localStorage on app start
     if (authService.isAuthenticated()) {
       const storedUser = authService.getStoredUser()

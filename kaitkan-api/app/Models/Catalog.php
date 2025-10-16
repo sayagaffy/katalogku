@@ -22,6 +22,7 @@ class Catalog extends Model
         'whatsapp',
         'avatar',
         'theme',
+        'theme_id',
         'is_published',
     ];
 
@@ -61,5 +62,29 @@ class Catalog extends Model
         return $this->products()
             ->where('in_stock', true)
             ->orderBy('sort_order');
+    }
+
+    /**
+     * Get the links for the catalog.
+     */
+    public function links(): HasMany
+    {
+        return $this->hasMany(Link::class);
+    }
+
+    /**
+     * Get the link groups for the catalog.
+     */
+    public function linkGroups(): HasMany
+    {
+        return $this->hasMany(LinkGroup::class);
+    }
+
+    /**
+     * Theme associated with the catalog.
+     */
+    public function theme(): BelongsTo
+    {
+        return $this->belongsTo(Theme::class);
     }
 }

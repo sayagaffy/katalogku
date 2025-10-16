@@ -2,6 +2,10 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\LinkController;
+use App\Http\Controllers\LinkGroupController;
+use App\Http\Controllers\ThemeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ClickController;
 use Illuminate\Support\Facades\Route;
@@ -36,10 +40,36 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/user', [AuthController::class, 'getUser']);
     });
 
+    // Profile routes (maps to Catalog)
+    Route::get('/profile', [ProfileController::class, 'show']);
+    Route::patch('/profile', [ProfileController::class, 'update']);
+    Route::post('/profile/onboarding', [ProfileController::class, 'onboarding']);
+    Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
+
     // Catalog routes
     Route::prefix('catalog')->group(function () {
         Route::get('/', [CatalogController::class, 'show']);
         Route::post('/', [CatalogController::class, 'store']);
+    });
+
+    // Theme routes
+    Route::get('/themes', [ThemeController::class, 'index']);
+
+    // Link routes
+    Route::prefix('links')->group(function () {
+        Route::get('/', [LinkController::class, 'index']);
+        Route::post('/', [LinkController::class, 'store']);
+        Route::patch('/{id}', [LinkController::class, 'update']);
+        Route::patch('/reorder', [LinkController::class, 'reorder']);
+        Route::delete('/{id}', [LinkController::class, 'destroy']);
+    });
+
+    // Link group routes
+    Route::prefix('link-groups')->group(function () {
+        Route::get('/', [LinkGroupController::class, 'index']);
+        Route::post('/', [LinkGroupController::class, 'store']);
+        Route::patch('/{id}', [LinkGroupController::class, 'update']);
+        Route::delete('/{id}', [LinkGroupController::class, 'destroy']);
     });
 
     // Product routes

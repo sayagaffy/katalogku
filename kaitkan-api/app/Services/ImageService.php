@@ -166,6 +166,18 @@ class ImageService
     }
 
     /**
+     * Upload link thumbnail image.
+     *
+     * @param UploadedFile $file
+     * @return array
+     * @throws \Exception
+     */
+    public function uploadLinkThumbnail(UploadedFile $file): array
+    {
+        return $this->uploadAndProcess($file, 'links', 600, 600);
+    }
+
+    /**
      * Compress and store image for a product (max 1000x1000).
      * Saves both WebP (80%) and JPG (85%). If a product ID is provided,
      * images are stored under products/{productId}.

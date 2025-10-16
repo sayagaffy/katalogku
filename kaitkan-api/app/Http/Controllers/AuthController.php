@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\SendOTPRequest;
 use App\Http\Requests\VerifyOTPRequest;
+use App\Models\Catalog;
 use App\Models\OTPCode;
 use App\Models\User;
 use App\Services\OTPService;
@@ -13,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -80,12 +82,30 @@ class AuthController extends Controller
                 ], 409);
             }
 
-            // Create new user
+            // Create new user with suggested username
+            $name = $request->input('name');
+            $suggestedUsername = $this->generateUniqueUsername($name ?: $whatsapp);
+
             $user = User::create([
-                'name' => $request->input('name'),
+                'name' => $name,
                 'whatsapp' => $whatsapp,
+                'username' => $suggestedUsername,
                 'password' => Hash::make($request->input('password')),
                 'verified_at' => Carbon::now(),
+            ]);
+
+            // Create draft catalog (profile) for onboarding
+            $catalogName = $name ?: 'Toko ' . Str::substr($whatsapp, -4);
+            Catalog::create([
+                'user_id' => $user->id,
+                'name' => $catalogName,
+                'username' => $suggestedUsername,
+                'description' => null,
+                'category' => null,
+                'whatsapp' => $whatsapp,
+                'avatar' => null,
+                'theme' => 'default',
+                'is_published' => false,
             ]);
 
             // Generate Sanctum token
@@ -232,5 +252,35 @@ class AuthController extends Controller
                 'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
+    }
+
+    /**
+     * Generate a unique username slug for both users and catalogs.
+     */
+    protected function generateUniqueUsername(string $base): string
+    {
+        $slug = Str::slug($base);
+        // Fallback if slug is empty (e.g., base is numbers only)
+        if (!$slug) {
+            $slug = 'user';
+        }
+
+        $slug = Str::limit($slug, 40, ''); // reserve space for suffix if needed
+        $candidate = $slug;
+        $suffix = 0;
+
+        while (
+            User::where('username', $candidate)->exists() ||
+            Catalog::where('username', $candidate)->exists()
+        ) {
+            $suffix++;
+            $candidate = Str::limit($slug, 40, '') . '-' . $suffix;
+            if ($suffix > 9999) {
+                $candidate = $slug . '-' . Str::random(4);
+                break;
+            }
+        }
+
+        return $candidate;
     }
 }

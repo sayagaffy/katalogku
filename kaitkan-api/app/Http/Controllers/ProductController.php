@@ -132,7 +132,7 @@ class ProductController extends Controller
             }
 
             // Upload image
-            $images = $this->imageService->uploadProduct($request->file('image'));
+            $images = $this->imageService->compressAndStore($request->file('image'));
 
             // Create product
             $product = Product::create([
@@ -217,7 +217,7 @@ class ProductController extends Controller
                 $this->imageService->deleteImage($product->image_webp, $product->image_jpg);
 
                 // Upload new images
-                $images = $this->imageService->uploadProduct($request->file('image'));
+                $images = $this->imageService->compressAndStore($request->file('image'), $product->id);
                 $data['image_webp'] = $images['webp'];
                 $data['image_jpg'] = $images['jpg'];
             }

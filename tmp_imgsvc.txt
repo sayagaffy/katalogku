@@ -1,0 +1,168 @@
+1: <?php
+2: 
+3: namespace App\Services;
+4: 
+5: use Illuminate\Http\UploadedFile;
+6: use Illuminate\Support\Facades\Storage;
+7: use Illuminate\Support\Str;
+8: use Intervention\Image\Laravel\Facades\Image;
+9: 
+10: class ImageService
+11: {
+12:     /**
+13:      * Upload and process image (create WebP and JPG versions).
+14:      *
+15:      * @param UploadedFile $file
+16:      * @param string $directory Directory path (e.g., 'products', 'avatars')
+17:      * @param int $maxWidth Maximum width in pixels
+18:      * @param int $maxHeight Maximum height in pixels
+19:      * @return array ['webp' => 'path/to/image.webp', 'jpg' => 'path/to/image.jpg']
+20:      * @throws \Exception
+21:      */
+22:     public function uploadAndProcess(
+23:         UploadedFile $file,
+24:         string $directory = 'products',
+25:         int $maxWidth = 800,
+26:         int $maxHeight = 800
+27:     ): array {
+28:         // Validate file
+29:         $this->validateImage($file);
+30: 
+31:         // Generate unique filename
+32:         $filename = Str::uuid();
+33: 
+34:         // Create directory if not exists
+35:         $fullPath = "public/{$directory}";
+36:         if (!Storage::exists($fullPath)) {
+37:             Storage::makeDirectory($fullPath);
+38:         }
+39: 
+40:         // Load and process image
+41:         $image = Image::read($file->getRealPath());
+42: 
+43:         // Resize if needed (maintain aspect ratio)
+44:         if ($image->width() > $maxWidth || $image->height() > $maxHeight) {
+45:             $image->scale(width: $maxWidth, height: $maxHeight);
+46:         }
+47: 
+48:         // Save WebP version (80% quality)
+49:         $webpPath = "{$directory}/{$filename}.webp";
+50:         $webpFullPath = storage_path("app/public/{$webpPath}");
+51:         $image->toWebp(80)->save($webpFullPath);
+52: 
+53:         // Save JPG version (85% quality)
+54:         $jpgPath = "{$directory}/{$filename}.jpg";
+55:         $jpgFullPath = storage_path("app/public/{$jpgPath}");
+56:         $image->toJpeg(85)->save($jpgFullPath);
+57: 
+58:         return [
+59:             'webp' => $webpPath,
+60:             'jpg' => $jpgPath,
+61:         ];
+62:     }
+63: 
+64:     /**
+65:      * Delete image files (both WebP and JPG).
+66:      *
+67:      * @param string|null $webpPath
+68:      * @param string|null $jpgPath
+69:      * @return bool
+70:      */
+71:     public function deleteImage(?string $webpPath, ?string $jpgPath): bool
+72:     {
+73:         $deleted = true;
+74: 
+75:         if ($webpPath && Storage::disk('public')->exists($webpPath)) {
+76:             $deleted = Storage::disk('public')->delete($webpPath) && $deleted;
+77:         }
+78: 
+79:         if ($jpgPath && Storage::disk('public')->exists($jpgPath)) {
+80:             $deleted = Storage::disk('public')->delete($jpgPath) && $deleted;
+81:         }
+82: 
+83:         return $deleted;
+84:     }
+85: 
+86:     /**
+87:      * Validate uploaded image file.
+88:      *
+89:      * @param UploadedFile $file
+90:      * @return void
+91:      * @throws \Exception
+92:      */
+93:     protected function validateImage(UploadedFile $file): void
+94:     {
+95:         // Check file size (max 10MB from config)
+96:         $maxSize = config('filesystems.max_upload_size', 10240) * 1024; // Convert KB to bytes
+97:         if ($file->getSize() > $maxSize) {
+98:             throw new \Exception('Ukuran file terlalu besar. Maksimal ' . ($maxSize / 1024 / 1024) . 'MB');
+99:         }
+100: 
+101:         // Check mime type
+102:         $allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+103:         if (!in_array($file->getMimeType(), $allowedMimes)) {
+104:             throw new \Exception('Format file tidak didukung. Gunakan JPG, PNG, atau WebP');
+105:         }
+106: 
+107:         // Check if file is valid image
+108:         try {
+109:             $imageInfo = getimagesize($file->getRealPath());
+110:             if ($imageInfo === false) {
+111:                 throw new \Exception('File bukan gambar yang valid');
+112:             }
+113:         } catch (\Exception $e) {
+114:             throw new \Exception('File bukan gambar yang valid');
+115:         }
+116:     }
+117: 
+118:     /**
+119:      * Get full URL for image path.
+120:      *
+121:      * @param string|null $path
+122:      * @return string|null
+123:      */
+124:     public function getImageUrl(?string $path): ?string
+125:     {
+126:         if (!$path) {
+127:             return null;
+128:         }
+129: 
+130:         return Storage::disk('public')->url($path);
+131:     }
+132: 
+133:     /**
+134:      * Upload avatar image (smaller size).
+135:      *
+136:      * @param UploadedFile $file
+137:      * @return array
+138:      * @throws \Exception
+139:      */
+140:     public function uploadAvatar(UploadedFile $file): array
+141:     {
+142:         return $this->uploadAndProcess($file, 'avatars', 300, 300);
+143:     }
+144: 
+145:     /**
+146:      * Upload product image.
+147:      *
+148:      * @param UploadedFile $file
+149:      * @return array
+150:      * @throws \Exception
+151:      */
+152:     public function uploadProduct(UploadedFile $file): array
+153:     {
+154:         return $this->uploadAndProcess($file, 'products', 800, 800);
+155:     }
+156: 
+157:     /**
+158:      * Upload catalog banner/avatar.
+159:      *
+160:      * @param UploadedFile $file
+161:      * @return array
+162:      * @throws \Exception
+163:      */
+164:     public function uploadCatalog(UploadedFile $file): array
+165:     {
+166:         return $this->uploadAndProcess($file, 'catalogs', 500, 500);
+167:     }
+168: }

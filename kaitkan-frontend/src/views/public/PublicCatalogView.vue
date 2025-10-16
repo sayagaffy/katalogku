@@ -138,12 +138,14 @@ import { useRoute } from 'vue-router'
 import { useCatalogStore } from '@/stores/catalog'
 import { productService } from '@/services/product.service'
 import { formatPrice } from '@/utils/helpers'
+import { useWhatsApp } from '@/composables/useWhatsApp'
 
 // Public site URL for branding links
 const siteUrl = import.meta.env.VITE_PUBLIC_URL || window.location.origin
 
 const route = useRoute()
 const catalogStore = useCatalogStore()
+const { generateOrderLink, trackClick } = useWhatsApp()
 
 const catalog = ref(null)
 const isLoading = ref(true)
@@ -185,15 +187,14 @@ async function loadCatalog() {
 async function handleProductClick(product) {
   try {
     // Track click
-    await productService.trackClick(product.id)
+    await trackClick(product.id)
 
     // Redirect to external link or WhatsApp
     if (product.external_link) {
       window.open(product.external_link, '_blank')
     } else if (catalog.value.whatsapp) {
-      const phone = catalog.value.whatsapp.replace(/\D/g, '')
-      const message = encodeURIComponent(`Halo, saya tertarik dengan ${product.name}`)
-      window.open(`https://wa.me/${phone}?text=${message}`, '_blank')
+      const url = generateOrderLink(product, catalog.value.whatsapp, catalog.value.name)
+      window.open(url, '_blank')
     }
   } catch (err) {
     console.error('Error tracking click:', err)

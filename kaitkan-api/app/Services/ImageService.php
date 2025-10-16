@@ -31,10 +31,9 @@ class ImageService
         // Generate unique filename
         $filename = Str::uuid();
 
-        // Create directory if not exists
-        $fullPath = "public/{$directory}";
-        if (!Storage::exists($fullPath)) {
-            Storage::makeDirectory($fullPath);
+        // Ensure target directory exists on the public disk
+        if (!Storage::disk('public')->exists($directory)) {
+            Storage::disk('public')->makeDirectory($directory);
         }
 
         // Load and process image
@@ -47,12 +46,12 @@ class ImageService
 
         // Save WebP version (80% quality)
         $webpPath = "{$directory}/{$filename}.webp";
-        $webpFullPath = storage_path("app/public/{$webpPath}");
+        $webpFullPath = Storage::disk('public')->path($webpPath);
         $image->toWebp(80)->save($webpFullPath);
 
         // Save JPG version (85% quality)
         $jpgPath = "{$directory}/{$filename}.jpg";
-        $jpgFullPath = storage_path("app/public/{$jpgPath}");
+        $jpgFullPath = Storage::disk('public')->path($jpgPath);
         $image->toJpeg(85)->save($jpgFullPath);
 
         return [
@@ -151,7 +150,7 @@ class ImageService
      */
     public function uploadProduct(UploadedFile $file): array
     {
-        return $this->uploadAndProcess($file, 'products', 800, 800);
+        return $this->uploadAndProcess($file, 'products', 1000, 1000);
     }
 
     /**
@@ -164,5 +163,21 @@ class ImageService
     public function uploadCatalog(UploadedFile $file): array
     {
         return $this->uploadAndProcess($file, 'catalogs', 500, 500);
+    }
+
+    /**
+     * Compress and store image for a product (max 1000x1000).
+     * Saves both WebP (80%) and JPG (85%). If a product ID is provided,
+     * images are stored under products/{productId}.
+     *
+     * @param UploadedFile $file
+     * @param int|null $productId
+     * @return array{webp:string,jpg:string}
+     * @throws \Exception
+     */
+    public function compressAndStore(UploadedFile $file, ?int $productId = null): array
+    {
+        $dir = $productId ? 'products/' . $productId : 'products';
+        return $this->uploadAndProcess($file, $dir, 1000, 1000);
     }
 }

@@ -10,28 +10,7 @@
     <div class="max-w-md w-full space-y-8 animate-slide-up">
       <!-- Logo & Header -->
       <div class="text-center">
-        <div
-          class="mx-auto w-16 h-16 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-2xl flex items-center justify-center mb-4 shadow-glow animate-scale-in"
-        >
-          <svg
-            class="w-10 h-10 text-white"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-            />
-          </svg>
-        </div>
-        <h1
-          class="text-4xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 dark:from-primary-400 dark:to-secondary-400 bg-clip-text text-transparent"
-        >
-          Kaitkan
-        </h1>
+        <img src="/logo.png" alt="Kaitkan" class="mx-auto h-12 w-auto mb-4 object-contain" />
         <p class="mt-3 text-base text-gray-600 dark:text-gray-400">
           Masuk ke akun Anda
         </p>
@@ -76,16 +55,40 @@
             @blur="validateWhatsapp"
           />
 
-          <BaseInput
-            v-model="form.password"
-            label="Password"
-            type="password"
-            placeholder="Masukkan password"
-            :error="validation.getError('password')"
-            :disabled="isLoading"
-            required
-            @blur="validatePassword"
-          />
+          <template v-if="usePinLogin">
+            <BaseInput
+              v-model="form.pin"
+              label="PIN (6 digit)"
+              type="password"
+              placeholder="******"
+              :error="validation.getError('pin')"
+              :disabled="isLoading"
+              required
+              @blur="validatePin"
+            />
+          </template>
+          <template v-else>
+            <BaseInput
+              v-model="form.password"
+              label="Password"
+              type="password"
+              placeholder="Masukkan password"
+              :error="validation.getError('password')"
+              :disabled="isLoading"
+              required
+              @blur="validatePassword"
+            />
+          </template>
+
+          <div class="text-right -mt-2">
+            <button
+              type="button"
+              class="text-sm font-medium text-primary-600 hover:text-primary-500"
+              @click="usePinLogin = !usePinLogin"
+            >
+              {{ usePinLogin ? 'Gunakan Password' : 'Masuk dengan PIN' }}
+            </button>
+          </div>
 
           <!-- Error message -->
           <div
@@ -137,6 +140,15 @@
             </span>
           </BaseButton>
 
+          <div v-if="usePinLogin" class="text-center pt-2">
+            <router-link
+              to="/forgot-pin"
+              class="text-sm font-medium text-primary-600 hover:text-primary-500"
+            >
+              Lupa PIN?
+            </router-link>
+          </div>
+
           <!-- Register link -->
           <div class="text-center pt-4">
             <p class="text-sm text-gray-600 dark:text-gray-400">
@@ -171,10 +183,12 @@ const validation = useFormValidation()
 const form = reactive({
   whatsapp: '',
   password: '',
+  pin: '',
 })
 
 const isLoading = ref(false)
 const errorMessage = ref('')
+const usePinLogin = ref(false)
 
 function validateWhatsapp() {
   const error = validation.validateWhatsapp(form.whatsapp)
@@ -194,6 +208,15 @@ function validatePassword() {
   }
 }
 
+function validatePin() {
+  const val = (form.pin || '').trim()
+  if (!/^[0-9]{6}$/.test(val)) {
+    validation.setError('pin', 'PIN harus 6 digit angka')
+  } else {
+    validation.clearError('pin')
+  }
+}
+
 async function handleLogin() {
   console.log('=== Login Started ===')
   console.log('Form data:', { whatsapp: form.whatsapp, password: '***' })
@@ -203,7 +226,11 @@ async function handleLogin() {
 
   // Validate all fields
   validateWhatsapp()
-  validatePassword()
+  if (usePinLogin.value) {
+    validatePin()
+  } else {
+    validatePassword()
+  }
 
   console.log('Validation errors:', validation.errors.value)
   console.log('Has errors:', validation.hasErrors.value)
@@ -219,8 +246,10 @@ async function handleLogin() {
   errorMessage.value = ''
 
   try {
-    console.log('Calling authStore.login...')
-    const response = await authStore.login(form.whatsapp, form.password)
+    console.log('Calling auth store...')
+    const response = usePinLogin.value
+      ? await authStore.loginWithPin(form.whatsapp, form.pin)
+      : await authStore.login(form.whatsapp, form.password)
     console.log('Login response:', response)
 
     console.log('Login successful, redirecting to dashboard...')

@@ -30,6 +30,12 @@ const router = createRouter({
       component: () => import('@/views/auth/VerifyOTPView.vue'),
       meta: { requiresGuest: true },
     },
+    {
+      path: '/forgot-pin',
+      name: 'forgot-pin',
+      component: () => import('@/views/auth/ResetPinView.vue'),
+      meta: { requiresGuest: true },
+    },
     // Dashboard routes (protected)
     {
       path: '/dashboard',
@@ -46,6 +52,11 @@ const router = createRouter({
           path: 'products',
           name: 'dashboard-products',
           component: () => import('@/views/dashboard/ProductsView.vue'),
+        },
+        {
+          path: 'links',
+          name: 'dashboard-links',
+          component: () => import('@/views/dashboard/LinksView.vue'),
         },
         {
           path: 'catalog',

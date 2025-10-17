@@ -6,7 +6,7 @@
         <div class="flex justify-between h-16">
           <div class="flex">
             <div class="flex-shrink-0 flex items-center">
-              <h1 class="text-xl font-bold text-gray-900">Kaitkan</h1>
+              <img src="/logo.png" alt="Kaitkan" class="h-8 w-auto" />
             </div>
           </div>
           <div class="flex items-center space-x-4">
@@ -68,6 +68,7 @@ const userName = computed(() => authStore.userName || 'Pengguna')
 
 const tabs = [
   { name: 'home', label: 'Beranda', to: '/dashboard' },
+  { name: 'links', label: 'Tautan', to: '/dashboard/links' },
   { name: 'products', label: 'Produk', to: '/dashboard/products' },
   { name: 'catalog', label: 'Katalog', to: '/dashboard/catalog' },
   { name: 'analytics', label: 'Analitik', to: '/dashboard/analytics' },

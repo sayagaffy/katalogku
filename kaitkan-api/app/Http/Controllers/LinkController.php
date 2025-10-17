@@ -20,6 +20,52 @@ class LinkController extends Controller
     }
 
     /**
+     * Public: track click for a link (increments click_count).
+     */
+    public function trackClickPublic(int $id): JsonResponse
+    {
+        try {
+            $link = Link::find($id);
+            if (!$link || !$link->is_active) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tautan tidak ditemukan',
+                ], 404);
+            }
+
+            $link->increment('click_count');
+            // Also insert raw click for analytics
+            try {
+                $ip = request()->ip();
+                $ua = substr((string) request()->userAgent(), 0, 255);
+                $ref = substr((string) request()->headers->get('referer', ''), 0, 500);
+                $ipHash = hash('sha256', config('app.key') . '|' . $ip);
+                \Illuminate\Support\Facades\DB::table('link_clicks')->insert([
+                    'catalog_id' => $link->catalog_id,
+                    'link_id' => $link->id,
+                    'ip_hash' => $ipHash,
+                    'user_agent' => $ua,
+                    'referrer' => $ref,
+                    'clicked_at' => now(),
+                    'created_at' => now(),
+                ]);
+            } catch (\Throwable $e) {
+                // swallow, not critical for UX
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Klik tercatat',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mencatat klik tautan',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+    /**
      * List links for current user's catalog.
      */
     public function index(Request $request): JsonResponse
@@ -313,4 +359,3 @@ class LinkController extends Controller
         ];
     }
 }
-

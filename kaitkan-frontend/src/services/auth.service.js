@@ -47,6 +47,22 @@ export const authService = {
   },
 
   /**
+   * Login with WhatsApp and 6-digit PIN
+   * @param {string} whatsapp
+   * @param {string} pin
+   */
+  async loginWithPin(whatsapp, pin) {
+    const response = await apiClient.post(API_ENDPOINTS.AUTH.LOGIN_PIN, {
+      whatsapp,
+      pin,
+    })
+    if (response.success && response.data.token) {
+      this.setAuthData(response.data.token, response.data.user)
+    }
+    return response
+  },
+
+  /**
    * Logout current user
    * @returns {Promise}
    */
@@ -64,6 +80,18 @@ export const authService = {
    */
   async getUser() {
     return await apiClient.get(API_ENDPOINTS.AUTH.GET_USER)
+  },
+
+  /**
+   * Set or change 6-digit PIN (requires auth)
+   * @param {string} pin
+   * @param {string} pin_confirmation
+   */
+  async setPin(pin, pin_confirmation) {
+    return await apiClient.post(API_ENDPOINTS.AUTH.SET_PIN, {
+      pin,
+      pin_confirmation,
+    })
   },
 
   /**

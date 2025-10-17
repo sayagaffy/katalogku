@@ -20,12 +20,9 @@
         >
           {{ p.label }}
         </button>
-        <BaseButton variant="ghost" size="sm" disabled title="Export CSV (segera)">
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m0 0l-3-3m3 3l3-3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-          Export
-        </BaseButton>
+        <BaseButton variant="ghost" size="sm" @click="exportSummary">Export Summary</BaseButton>
+        <BaseButton variant="ghost" size="sm" @click="exportTopLinks">Export Top Links</BaseButton>
+        <BaseButton variant="ghost" size="sm" @click="exportTopProducts">Export Top Products</BaseButton>
       </div>
     </div>
 
@@ -95,7 +92,11 @@
           </li>
           <li class="flex items-center justify-between">
             <span class="text-gray-600">Sumber terbanyak</span>
-            <span class="font-semibold text-gray-900">Instagram</span>
+            <span class="font-semibold text-gray-900">{{ (topSources[0]?.name || '-') }} ({{ topSources[0]?.count || 0 }})</span>
+          </li>
+          <li class="flex items-center justify-between">
+            <span class="text-gray-600">Perangkat</span>
+            <span class="font-semibold text-gray-900">Mobile {{ devices.mobile || 0 }} · Desktop {{ devices.desktop || 0 }}</span>
           </li>
         </ul>
         <div class="mt-5 p-3 rounded-xl bg-primary-50 border border-primary-100 text-sm text-primary-900">
@@ -159,61 +160,107 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { analyticsService } from '@/services/analytics.service'
 
-// Range presets (dummy)
+// Range presets
 const presets = [
   { label: '7 Hari', value: '7d' },
   { label: '30 Hari', value: '30d' },
-  { label: 'Semua', value: 'all' },
 ]
 const range = ref('7d')
 const labelRange = computed(() => presets.find(p => p.value === range.value)?.label || '')
 
-// Overview dummy data
-const overview = {
-  views: 3280,
-  clicks: 412,
-  ctr: (412 / 3280) * 100,
-}
-const overviewDelta = {
-  views: +8.4,
-  clicks: +11.2,
-  ctr: +2.6,
-}
+// Loading / error
+const isLoading = ref(false)
+const errorMessage = ref('')
 
-// Series for faux chart (normalized 0..100)
-const viewsSeries = [20, 35, 30, 40, 45, 38, 55, 60, 58, 70, 68, 75]
-const clicksSeries = [5, 10, 8, 12, 15, 11, 18, 22, 20, 26, 24, 28]
+// Overview
+const overview = ref({ views: 0, clicks: 0, ctr: 0 })
+const overviewDelta = ref({ views: null, clicks: null, ctr: null }) // reserved for future
+
+// Series (raw from API)
+const labels = ref([])
+const viewsSeries = ref([])
+const clicksSeries = ref([])
+
+// Top lists
+const topProducts = ref([])
+const topLinks = ref([])
 
 function chartPoints(series) {
-  const step = 100 / (series.length - 1)
-  const max = Math.max(...series) || 1
-  return series.map((v, i) => `${i * step},${100 - (v / max) * 100}`).join(' ')
+  const s = Array.isArray(series) ? series : []
+  const step = s.length > 1 ? 100 / (s.length - 1) : 100
+  const max = Math.max(...s, 1)
+  return s.map((v, i) => `${i * step},${100 - (v / max) * 100}`).join(' ')
 }
 
-// Top products dummy
-const topProducts = [
-  { id: 1, name: 'Dress Floral Cantik', clicks: 96, ctr: 42.1 },
-  { id: 2, name: 'Earphone Bluetooth TWS', clicks: 81, ctr: 36.8 },
-  { id: 3, name: 'Power Bank 20000mAh', clicks: 67, ctr: 28.4 },
-  { id: 4, name: 'Kaos Oversized Premium', clicks: 55, ctr: 22.6 },
-]
+async function loadAnalytics() {
+  isLoading.value = true
+  errorMessage.value = ''
+  try {
+    const [summary, links, products] = await Promise.all([
+      analyticsService.getSummary(range.value),
+      analyticsService.getTopLinks(range.value),
+      analyticsService.getTopProducts(range.value),
+    ])
 
-// Recent clicks dummy
-const recentClicks = [
-  { id: 1, product: 'Dress Floral Cantik', time: '2m lalu', source: 'Instagram', device: 'Mobile' },
-  { id: 2, product: 'Power Bank 20000mAh', time: '8m lalu', source: 'WhatsApp', device: 'Mobile' },
-  { id: 3, product: 'Smart Watch Fitness', time: '12m lalu', source: 'TikTok', device: 'Web' },
-  { id: 4, product: 'Kaos Oversized Premium', time: '25m lalu', source: 'Instagram', device: 'Mobile' },
-]
+    if (summary?.success) {
+      overview.value = summary.data?.totals || { views: 0, clicks: 0, ctr: 0 }
+      labels.value = summary.data?.series?.labels || []
+      viewsSeries.value = summary.data?.series?.views || []
+      clicksSeries.value = summary.data?.series?.clicks || []
+      topSources.value = summary.data?.breakdown?.sources || []
+      devices.value = summary.data?.breakdown?.devices || { mobile: 0, desktop: 0 }
+    }
+    if (links?.success) topLinks.value = links.data || []
+    if (products?.success) topProducts.value = (products.data || []).map(p => ({ id: p.product_id, name: `#${p.product_id}`, clicks: p.clicks, ctr: null }))
+  } catch (e) {
+    errorMessage.value = typeof e === 'string' ? e : 'Gagal memuat analitik'
+  } finally {
+    isLoading.value = false
+  }
+}
 
-const avgClicksPerDay = computed(() => Math.round(overview.clicks / 7))
-const productsWithClicks = computed(() => topProducts.filter(p => p.clicks > 0).length)
+watch(range, () => loadAnalytics())
+onMounted(() => loadAnalytics())
 
-function formatNumber(n) {
-  return new Intl.NumberFormat('id-ID').format(n)
+const avgClicksPerDay = computed(() => {
+  const days = range.value === '30d' ? 30 : 7
+  return Math.round((overview.value.clicks || 0) / days)
+})
+const productsWithClicks = computed(() => (topProducts.value || []).filter(p => p.clicks > 0).length)
+
+function formatNumber(n) { return new Intl.NumberFormat('id-ID').format(n || 0) }
+
+// Breakdown reactive stores
+const topSources = ref([])
+const devices = ref({ mobile: 0, desktop: 0 })
+
+// Export helpers
+function downloadBlob(filename, blob) {
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+async function exportSummary() {
+  const blob = await analyticsService.exportSummary(range.value)
+  downloadBlob(`analytics_summary_${range.value}.csv`, blob)
+}
+async function exportTopLinks() {
+  const blob = await analyticsService.exportTopLinks(range.value)
+  downloadBlob(`analytics_top_links_${range.value}.csv`, blob)
+}
+async function exportTopProducts() {
+  const blob = await analyticsService.exportTopProducts(range.value)
+  downloadBlob(`analytics_top_products_${range.value}.csv`, blob)
 }
 </script>
 

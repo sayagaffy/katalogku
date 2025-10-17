@@ -21,6 +21,10 @@ class Catalog extends Model
         'category',
         'whatsapp',
         'avatar',
+        'bg_image_webp',
+        'bg_image_jpg',
+        'bg_overlay_opacity',
+        'social_icons_position',
         'theme',
         'theme_id',
         'is_published',
@@ -35,6 +39,7 @@ class Catalog extends Model
     {
         return [
             'is_published' => 'boolean',
+            'bg_overlay_opacity' => 'float',
         ];
     }
 

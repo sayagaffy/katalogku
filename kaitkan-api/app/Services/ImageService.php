@@ -9,6 +9,11 @@ use Intervention\Image\Laravel\Facades\Image;
 
 class ImageService
 {
+    protected function disk(): string
+    {
+        return config('filesystems.image_disk', 'public');
+    }
+
     /**
      * Upload and process image (create WebP and JPG versions).
      *
@@ -28,31 +33,41 @@ class ImageService
         // Validate file
         $this->validateImage($file);
 
-        // Generate unique filename
-        $filename = Str::uuid();
+        $disk = $this->disk();
+        $filename = (string) Str::uuid();
+        $webpPath = "{$directory}/{$filename}.webp";
+        $jpgPath = "{$directory}/{$filename}.jpg";
 
-        // Ensure target directory exists on the public disk
-        if (!Storage::disk('public')->exists($directory)) {
-            Storage::disk('public')->makeDirectory($directory);
+        // Ensure directory (local only)
+        if (config("filesystems.disks.{$disk}.driver") === 'local') {
+            if (!Storage::disk($disk)->exists($directory)) {
+                Storage::disk($disk)->makeDirectory($directory);
+            }
         }
 
-        // Load and process image
+        // Read & process image once
         $image = Image::read($file->getRealPath());
-
-        // Resize if needed (maintain aspect ratio)
         if ($image->width() > $maxWidth || $image->height() > $maxHeight) {
             $image->scale(width: $maxWidth, height: $maxHeight);
         }
 
-        // Save WebP version (80% quality)
-        $webpPath = "{$directory}/{$filename}.webp";
-        $webpFullPath = Storage::disk('public')->path($webpPath);
-        $image->toWebp(80)->save($webpFullPath);
+        // Save to temp files then upload via Storage (works for local & s3)
+        $tmpDir = sys_get_temp_dir();
+        $webpTmp = $tmpDir . DIRECTORY_SEPARATOR . $filename . '.webp';
+        $jpgTmp = $tmpDir . DIRECTORY_SEPARATOR . $filename . '.jpg';
 
-        // Save JPG version (85% quality)
-        $jpgPath = "{$directory}/{$filename}.jpg";
-        $jpgFullPath = Storage::disk('public')->path($jpgPath);
-        $image->toJpeg(85)->save($jpgFullPath);
+        $image->toWebp(80)->save($webpTmp);
+        $image->toJpeg(85)->save($jpgTmp);
+
+        // Put to storage with public visibility when supported
+        $streamWebp = fopen($webpTmp, 'r');
+        $streamJpg = fopen($jpgTmp, 'r');
+        Storage::disk($disk)->put($webpPath, $streamWebp, ['visibility' => 'public']);
+        Storage::disk($disk)->put($jpgPath, $streamJpg, ['visibility' => 'public']);
+        if (is_resource($streamWebp)) fclose($streamWebp);
+        if (is_resource($streamJpg)) fclose($streamJpg);
+        @unlink($webpTmp);
+        @unlink($jpgTmp);
 
         return [
             'webp' => $webpPath,
@@ -69,14 +84,15 @@ class ImageService
      */
     public function deleteImage(?string $webpPath, ?string $jpgPath): bool
     {
+        $disk = $this->disk();
         $deleted = true;
 
-        if ($webpPath && Storage::disk('public')->exists($webpPath)) {
-            $deleted = Storage::disk('public')->delete($webpPath) && $deleted;
+        if ($webpPath && Storage::disk($disk)->exists($webpPath)) {
+            $deleted = Storage::disk($disk)->delete($webpPath) && $deleted;
         }
 
-        if ($jpgPath && Storage::disk('public')->exists($jpgPath)) {
-            $deleted = Storage::disk('public')->delete($jpgPath) && $deleted;
+        if ($jpgPath && Storage::disk($disk)->exists($jpgPath)) {
+            $deleted = Storage::disk($disk)->delete($jpgPath) && $deleted;
         }
 
         return $deleted;
@@ -126,7 +142,14 @@ class ImageService
             return null;
         }
 
-        return Storage::disk('public')->url($path);
+        $disk = $this->disk();
+        $cdn = config('filesystems.cdn_url');
+
+        if ($cdn && $disk !== 'public') {
+            return rtrim($cdn, '/') . '/' . ltrim($path, '/');
+        }
+
+        return Storage::disk($disk)->url($path);
     }
 
     /**

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\SendOTPRequest;
 use App\Http\Requests\VerifyOTPRequest;
+use App\Http\Requests\ResetPinRequest;
 use App\Models\Catalog;
 use App\Models\OTPCode;
 use App\Models\User;
@@ -15,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
@@ -25,6 +27,60 @@ class AuthController extends Controller
         $this->otpService = $otpService;
     }
 
+    /**
+     * Reset PIN using OTP verification (no auth required).
+     * If success, also returns a new access token for convenience.
+     */
+    public function resetPin(ResetPinRequest $request): JsonResponse
+    {
+        $whatsapp = $request->input('whatsapp');
+        $otp = $request->input('otp');
+        $pin = $request->input('pin');
+
+        // Verify OTP
+        $result = $this->otpService->verifyOTP($whatsapp, $otp);
+        if (!$result['valid']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'],
+            ], 400);
+        }
+
+        // Find user
+        $user = User::where('whatsapp', $whatsapp)->first();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun tidak ditemukan',
+            ], 404);
+        }
+
+        // Set PIN
+        $user->pin_hash = Hash::make($pin);
+        if (!$user->verified_at) {
+            $user->verified_at = Carbon::now();
+        }
+        $user->save();
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'PIN berhasil direset',
+            'data' => [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'whatsapp' => $user->whatsapp,
+                    'username' => $user->username,
+                    'avatar' => $user->avatar,
+                    'verified_at' => $user->verified_at,
+                ],
+                'token' => $token,
+                'token_type' => 'Bearer',
+            ],
+        ]);
+    }
     /**
      * Send OTP code to WhatsApp number
      *
@@ -197,6 +253,152 @@ class AuthController extends Controller
         }
     }
 
+    /**
+     * Set or change 6-digit PIN for the authenticated user.
+     */
+    public function setPin(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'pin' => ['required', 'digits:6', 'confirmed'],
+        ], [
+            'pin.required' => 'PIN harus diisi',
+            'pin.digits' => 'PIN harus 6 digit',
+            'pin.confirmed' => 'Konfirmasi PIN tidak cocok',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $user = $request->user();
+        $user->pin_hash = Hash::make($request->input('pin'));
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'PIN berhasil diset',
+        ]);
+    }
+
+    /**
+     * Login using WhatsApp + 6-digit PIN.
+     */
+    public function loginWithPin(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'whatsapp' => ['required', 'string', 'regex:/^(08|628|\+628)[0-9]{8,12}$/'],
+            'pin' => ['required', 'digits:6'],
+        ], [
+            'whatsapp.required' => 'Nomor WhatsApp harus diisi',
+            'whatsapp.regex' => 'Format nomor WhatsApp tidak valid',
+            'pin.required' => 'PIN harus diisi',
+            'pin.digits' => 'PIN harus 6 digit',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $user = User::where('whatsapp', $request->input('whatsapp'))->first();
+        if (!$user || !$user->pin_hash || !Hash::check($request->input('pin'), $user->pin_hash)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nomor WhatsApp atau PIN salah',
+            ], 401);
+        }
+
+        if (!$user->verified_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun belum diverifikasi. Silakan daftar ulang.',
+            ], 403);
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Login berhasil',
+            'data' => [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'whatsapp' => $user->whatsapp,
+                    'username' => $user->username,
+                    'avatar' => $user->avatar,
+                    'verified_at' => $user->verified_at,
+                ],
+                'token' => $token,
+                'token_type' => 'Bearer',
+            ],
+        ]);
+    }
+
+    /**
+     * Generate Firebase custom token for the authenticated user.
+     * Stubbed to 501 if Firebase SDK/credentials are not configured.
+     */
+    public function firebaseToken(Request $request): JsonResponse
+    {
+        try {
+            // Ensure Firebase SDK available
+            if (!class_exists('Kreait\\Firebase\\Factory')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Firebase tidak terkonfigurasi',
+                ], 501);
+            }
+
+            $user = $request->user();
+
+            // Resolve Firebase factory
+            $factory = new \Kreait\Firebase\Factory();
+
+            $credentials = env('FIREBASE_CREDENTIALS');
+            if ($credentials) {
+                $factory = $factory->withServiceAccount($credentials);
+            }
+
+            $auth = $factory->createAuth();
+
+            // Ensure Firebase user exists
+            if (!$user->firebase_uid) {
+                try {
+                    $firebaseUser = $auth->getUserByPhoneNumber($user->whatsapp);
+                } catch (\Throwable $e) {
+                    $firebaseUser = $auth->createUser([
+                        'phoneNumber' => $user->whatsapp,
+                        'displayName' => $user->name,
+                    ]);
+                }
+                $user->firebase_uid = $firebaseUser->uid;
+                $user->save();
+            }
+
+            $customToken = $auth->createCustomToken($user->firebase_uid);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'custom_token' => (string) $customToken,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat token Firebase',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
     /**
      * Logout current user (revoke token)
      *

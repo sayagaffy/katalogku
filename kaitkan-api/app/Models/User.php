@@ -24,6 +24,8 @@ class User extends Authenticatable
         'password',
         'avatar',
         'verified_at',
+        'pin_hash',
+        'firebase_uid',
     ];
 
     /**

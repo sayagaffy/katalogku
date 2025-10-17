@@ -2,7 +2,8 @@
   <div class="min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
       <!-- Header -->
-      <div>
+      <div class="text-center">
+        <img src="/logo.png" alt="Kaitkan" class="mx-auto h-12 w-auto mb-2 object-contain" />
         <h2 class="text-center text-3xl font-extrabold text-gray-900">Verifikasi OTP</h2>
         <p class="mt-2 text-center text-sm text-gray-600">
           Masukkan kode OTP yang dikirim ke WhatsApp

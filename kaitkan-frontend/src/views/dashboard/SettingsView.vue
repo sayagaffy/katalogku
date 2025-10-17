@@ -6,8 +6,8 @@
     </div>
 
     <!-- Profile -->
-    <section class="bg-white shadow p-6 rounded-2xl">
-      <h3 class="mb-4 font-bold text-gray-900 text-lg">Profil</h3>
+  <section class="bg-white shadow p-6 rounded-2xl">
+    <h3 class="mb-4 font-bold text-gray-900 text-lg">Profil</h3>
 
       <!-- Error Message -->
       <div
@@ -115,6 +115,31 @@
             disabled
             hint="Pengaturan email belum tersedia"
           />
+          <!-- Public Theme Selector -->
+          <div class="col-span-1 md:col-span-2">
+            <label class="block mb-1 text-sm font-semibold text-gray-700">Tema Halaman Publik</label>
+            <div class="flex items-center gap-3">
+              <select
+                v-model="form.theme_id"
+                class="bg-white px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                :disabled="isSaving || isLoadingThemes"
+                title="Pilih tema kurasi"
+              >
+                <option :value="null">Default</option>
+                <option v-for="t in themes" :key="t.id" :value="t.id">{{ t.name }}</option>
+              </select>
+              <div v-if="selectedThemePalette" class="flex items-center gap-1">
+                <span
+                  v-for="(val, key) in previewSwatches"
+                  :key="key"
+                  class="inline-block w-5 h-5 rounded"
+                  :style="{ backgroundColor: val }"
+                  :title="key"
+                ></span>
+              </div>
+            </div>
+            <p class="mt-1 text-xs text-gray-500">Tema ini digunakan untuk tampilan publik profil Anda.</p>
+          </div>
         </div>
       </div>
       <div class="flex items-center gap-3 mt-6">
@@ -188,39 +213,59 @@
       </div>
     </section>
 
+    
+
+    <!-- Background (Public Page) -->
+    <section class="bg-white shadow p-6 rounded-2xl">
+      <h3 class="mb-4 font-bold text-gray-900 text-lg">Background Halaman Publik</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <div class="md:col-span-2">
+          <ImageUpload
+            v-model="backgroundFile"
+            label="Background Image"
+            hint="PNG, JPG, WebP maksimal 20MB"
+            @change="handleBackgroundChange"
+          />
+        </div>
+        <div class="space-y-2">
+          <label class="block text-sm font-semibold text-gray-700">Overlay Gelap</label>
+          <input type="range" min="0" max="1" step="0.05" v-model.number="backgroundOverlay" class="w-full" />
+          <div class="text-sm text-gray-600">Opacity: {{ backgroundOverlay.toFixed(2) }}</div>
+          <BaseButton :loading="isSavingBg" :disabled="isSavingBg" @click="saveBackground">Simpan Background</BaseButton>
+        </div>
+      </div>
+      <div v-if="backgroundPreview" class="mt-4">
+        <div class="rounded-xl overflow-hidden h-40 relative">
+          <img :src="backgroundPreview" class="w-full h-full object-cover" alt="Preview" />
+          <div class="absolute inset-0" :style="{ backgroundColor: `rgba(0,0,0,${backgroundOverlay})` }"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- Security -->
     <section class="bg-white shadow p-6 rounded-2xl">
       <h3 class="mb-4 font-bold text-gray-900 text-lg">Keamanan</h3>
       <div class="gap-4 grid grid-cols-1 md:grid-cols-3">
         <BaseInput
-          v-model="security.current"
+          v-model="security.pin"
           type="password"
-          label="Password saat ini"
-          placeholder="********"
-          disabled
+          label="PIN baru (6 digit)"
+          placeholder="******"
         />
         <BaseInput
-          v-model="security.newPass"
+          v-model="security.pinConfirm"
           type="password"
-          label="Password baru"
-          placeholder="********"
-          disabled
-        />
-        <BaseInput
-          v-model="security.confirm"
-          type="password"
-          label="Konfirmasi password"
-          placeholder="********"
-          disabled
+          label="Konfirmasi PIN"
+          placeholder="******"
         />
       </div>
       <div class="mt-4">
-        <BaseButton disabled title="Ganti password belum tersedia">Ganti Password</BaseButton>
+        <BaseButton :loading="isSavingPin" :disabled="isSavingPin" @click="savePin">Simpan PIN</BaseButton>
       </div>
       <div
-        class="bg-yellow-50 mt-6 p-4 border border-yellow-200 rounded-xl text-yellow-800 text-sm"
+        class="bg-blue-50 mt-6 p-4 border border-blue-200 rounded-xl text-blue-800 text-sm"
       >
-        Disarankan gunakan password kuat dan unik. Otentikasi 2-langkah akan tersedia segera.
+        Anda dapat masuk harian menggunakan PIN. Jika lupa PIN, lakukan verifikasi nomor untuk menyetel PIN baru.
       </div>
     </section>
 
@@ -238,17 +283,19 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { useCatalogStore } from '@/stores/catalog'
+import { useProfileStore } from '@/stores/profile'
+import { themeService } from '@/services/theme.service'
 import { useFormValidation } from '@/composables/useFormValidation'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ThemeToggle from '@/components/common/ThemeToggle.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
+// SocialIconsEditor moved to Links tab
 
 const authStore = useAuthStore()
-const catalogStore = useCatalogStore()
+const profileStore = useProfileStore()
 const validation = useFormValidation()
 
 const form = reactive({
@@ -257,20 +304,29 @@ const form = reactive({
   whatsapp: '',
   email: '', // not used yet
   avatar: null,
+  theme_id: null,
 })
 
 const initialProfile = ref(null)
 const imageUploadRef = ref(null)
 const avatarPreview = ref('')
+const backgroundFile = ref(null)
+const backgroundPreview = ref('')
+const backgroundOverlay = ref(0)
+const isSavingBg = ref(false)
+const socialIconsPosition = ref('top')
 
 const isSaving = ref(false)
 const errorMessage = ref('')
+const isLoadingThemes = ref(false)
+const themes = ref([])
 
 const notify = reactive({ weekly: true, clicks: true, updates: true })
 const isSavingPrefs = ref(false)
 const PREF_KEY = 'kaitkan_notify_prefs'
 
-const security = reactive({ current: '', newPass: '', confirm: '' })
+const security = reactive({ pin: '', pinConfirm: '' })
+const isSavingPin = ref(false)
 
 function initials(name) {
   if (!name) return 'K'
@@ -327,9 +383,45 @@ function handleAvatarChange({ file, error }) {
   }
 }
 
+function handleBackgroundChange({ file, error }) {
+  if (error) {
+    errorMessage.value = error
+    return
+  }
+  errorMessage.value = ''
+  if (typeof window !== 'undefined' && file instanceof window.File) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      backgroundPreview.value = e.target.result
+    }
+    reader.readAsDataURL(file)
+  } else if (typeof backgroundFile.value === 'string') {
+    backgroundPreview.value = backgroundFile.value
+  } else {
+    backgroundPreview.value = ''
+  }
+}
+
 // helpers for template-safe File checks
 const isFile = (val) => typeof window !== 'undefined' && val instanceof window.File
 const avatarFileName = computed(() => (isFile(form.avatar) ? form.avatar.name : ''))
+
+const selectedThemePalette = computed(() => {
+  const t = themes.value.find((x) => x.id === form.theme_id)
+  return t?.palette || null
+})
+
+const previewSwatches = computed(() => {
+  if (!selectedThemePalette.value) return null
+  const p = selectedThemePalette.value
+  // Pick common keys in order
+  const keys = ['primary', 'background', 'text', 'accent']
+  const out = {}
+  keys.forEach((k) => {
+    if (p[k]) out[k] = p[k]
+  })
+  return out
+})
 
 function snapshotInitial() {
   initialProfile.value = {
@@ -365,20 +457,27 @@ async function handleProfileSave() {
   isSaving.value = true
   errorMessage.value = ''
   try {
-    const payload = {
+    // First, update text fields
+    const res = await profileStore.updateProfile({
       name: form.name,
       username: form.username,
       whatsapp: form.whatsapp,
-      avatar: form.avatar,
-    }
-    const res = await catalogStore.saveCatalog(payload)
-    if (res?.success) {
-      // update preview if server returns avatar urls
+      theme_id: form.theme_id,
+    })
+
+    // Then, upload avatar if a new file is selected
+    if (typeof window !== 'undefined' && form.avatar instanceof window.File) {
+      const avatarRes = await profileStore.uploadAvatar(form.avatar)
+      const avatarUrl = avatarRes.data?.avatar?.webp || avatarRes.data?.avatar?.jpg || ''
+      if (avatarUrl) avatarPreview.value = avatarUrl
+    } else {
+      // Update preview from response if provided
       const avatarUrl = res.data?.avatar?.webp || res.data?.avatar?.jpg || ''
       if (avatarUrl) avatarPreview.value = avatarUrl
-      alert('Profil berhasil disimpan')
-      snapshotInitial()
     }
+
+    alert('Profil berhasil disimpan')
+    snapshotInitial()
   } catch (err) {
     if (err && typeof err === 'object' && err.errors) {
       errorMessage.value = err.message || 'Validasi gagal'
@@ -422,6 +521,33 @@ function savePreferences() {
   }
 }
 
+async function savePin() {
+  // simple client validation
+  const pin = (security.pin || '').trim()
+  const pinConfirm = (security.pinConfirm || '').trim()
+  if (!/^[0-9]{6}$/.test(pin)) {
+    alert('PIN harus 6 digit angka')
+    return
+  }
+  if (pin !== pinConfirm) {
+    alert('Konfirmasi PIN tidak cocok')
+    return
+  }
+
+  isSavingPin.value = true
+  try {
+    await authStore.setPin(pin, pinConfirm)
+    alert('PIN berhasil disimpan')
+    security.pin = ''
+    security.pinConfirm = ''
+  } catch (e) {
+    const msg = typeof e === 'string' ? e : (e?.message || 'Gagal menyimpan PIN')
+    alert(msg)
+  } finally {
+    isSavingPin.value = false
+  }
+}
+
 // Inline subcomponent for toggles (local to this view)
 const ToggleRow = {
   props: { label: String, description: String, checked: Boolean },
@@ -448,7 +574,7 @@ const ToggleRow = {
 
 onMounted(async () => {
   try {
-    // ensure auth and catalog data
+    // ensure auth and profile data
     if (!authStore.user) {
       try {
         await authStore.fetchUser()
@@ -456,23 +582,33 @@ onMounted(async () => {
         console.debug('fetchUser failed (non-blocking)', e)
       }
     }
-    await catalogStore.fetchCatalog()
+    await profileStore.fetchProfile()
   } catch (e) {
     console.debug('init settings failed', e)
   }
 
-  const catalog = catalogStore.catalog
-  if (catalog) {
-    form.name = catalog.name || ''
-    form.username = catalog.username || ''
-    form.whatsapp = catalog.whatsapp || authStore.userWhatsapp || ''
-    if (catalog.avatar?.webp) {
-      form.avatar = catalog.avatar.webp
-      avatarPreview.value = catalog.avatar.webp
-    } else if (catalog.avatar?.jpg) {
-      form.avatar = catalog.avatar.jpg
-      avatarPreview.value = catalog.avatar.jpg
+  const profile = profileStore.profile
+  if (profile) {
+    form.name = profile.name || ''
+    form.username = profile.username || ''
+    form.whatsapp = profile.whatsapp || authStore.userWhatsapp || ''
+    form.theme_id = profile.theme_id ?? null
+    if (profile.avatar?.webp) {
+      form.avatar = profile.avatar.webp
+      avatarPreview.value = profile.avatar.webp
+    } else if (profile.avatar?.jpg) {
+      form.avatar = profile.avatar.jpg
+      avatarPreview.value = profile.avatar.jpg
     }
+    if (profile.background?.image?.webp) {
+      backgroundFile.value = profile.background.image.webp
+      backgroundPreview.value = profile.background.image.webp
+    } else if (profile.background?.image?.jpg) {
+      backgroundFile.value = profile.background.image.jpg
+      backgroundPreview.value = profile.background.image.jpg
+    }
+    backgroundOverlay.value = Number(profile.background?.overlay_opacity || 0)
+    socialIconsPosition.value = profile.social_icons_position || 'top'
   } else {
     // prefill from user if catalog missing
     form.name = authStore.userName || ''
@@ -482,5 +618,51 @@ onMounted(async () => {
 
   snapshotInitial()
   loadPreferences()
+
+  // Load curated themes
+  try {
+    isLoadingThemes.value = true
+    const res = await themeService.list()
+    if (res?.success && Array.isArray(res.data)) {
+      themes.value = res.data
+      // If no theme selected yet, pick default
+      if (form.theme_id == null) {
+        const def = themes.value.find((t) => t.is_default)
+        if (def) form.theme_id = def.id
+      }
+    }
+  } catch (e) {
+    console.debug('load themes failed', e)
+  } finally {
+    isLoadingThemes.value = false
+  }
 })
+
+async function saveBackground() {
+  try {
+    isSavingBg.value = true
+    if (typeof window !== 'undefined' && backgroundFile.value instanceof window.File) {
+      const res = await profileStore.uploadBackground(backgroundFile.value)
+      const url = res.data?.background?.image?.webp || res.data?.background?.image?.jpg || ''
+      if (url) backgroundPreview.value = url
+    }
+    await profileStore.updateProfile({ bg_overlay_opacity: backgroundOverlay.value })
+    alert('Background tersimpan')
+  } catch (e) {
+    const msg = typeof e === 'string' ? e : (e?.message || 'Gagal menyimpan background')
+    alert(msg)
+  } finally {
+    isSavingBg.value = false
+  }
+}
+
+async function saveSocialPosition() {
+  try {
+    await profileStore.updateProfile({ social_icons_position: socialIconsPosition.value })
+    alert('Posisi ikon sosial tersimpan')
+  } catch (e) {
+    const msg = typeof e === 'string' ? e : (e?.message || 'Gagal menyimpan posisi ikon sosial')
+    alert(msg)
+  }
+}
 </script>

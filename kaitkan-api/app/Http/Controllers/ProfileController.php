@@ -79,6 +79,8 @@ class ProfileController extends Controller
                 'theme' => 'sometimes|nullable|string|in:default,blue,green,purple,pink',
                 'theme_id' => 'sometimes|nullable|exists:themes,id',
                 'is_published' => 'sometimes|boolean',
+                'bg_overlay_opacity' => 'sometimes|numeric|min:0|max:1',
+                'social_icons_position' => 'sometimes|in:top,bottom',
             ]);
 
             if ($validator->fails()) {
@@ -105,6 +107,14 @@ class ProfileController extends Controller
                 if (array_key_exists($field, $data)) {
                     $catalog->{$field} = $data[$field];
                 }
+            }
+
+            if (array_key_exists('bg_overlay_opacity', $data)) {
+                $catalog->bg_overlay_opacity = (float) $data['bg_overlay_opacity'];
+            }
+
+            if (array_key_exists('social_icons_position', $data)) {
+                $catalog->social_icons_position = $data['social_icons_position'];
             }
 
             if (array_key_exists('whatsapp', $data)) {
@@ -186,6 +196,57 @@ class ProfileController extends Controller
     }
 
     /**
+     * Upload or replace background image for profile.
+     */
+    public function uploadBackground(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $catalog = $user->catalog;
+            if (!$catalog) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Profil belum dibuat',
+                ], 404);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'background' => 'required|image|mimes:jpeg,jpg,png,webp|max:20480',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validasi gagal',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            // Delete old background if exists
+            if ($catalog->bg_image_webp || $catalog->bg_image_jpg) {
+                $this->imageService->deleteImage($catalog->bg_image_webp, $catalog->bg_image_jpg);
+            }
+
+            $images = $this->imageService->uploadAndProcess($request->file('background'), 'backgrounds', 1920, 1920);
+            $catalog->bg_image_webp = $images['webp'] ?? null;
+            $catalog->bg_image_jpg = $images['jpg'] ?? null;
+            $catalog->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Background diperbarui',
+                'data' => $this->formatProfile($catalog->fresh()),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengunggah background',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
+    /**
      * Onboarding step to set basic profile fields.
      */
     public function onboarding(Request $request): JsonResponse
@@ -259,8 +320,8 @@ class ProfileController extends Controller
             }
         }
 
-        return [
-            'id' => $catalog->id,
+            return [
+                'id' => $catalog->id,
             'name' => $catalog->name,
             'username' => $catalog->username,
             'description' => $catalog->description,
@@ -269,6 +330,14 @@ class ProfileController extends Controller
             'avatar' => $avatar,
             'theme' => $catalog->theme,
             'theme_id' => $catalog->theme_id,
+                'background' => [
+                    'image' => [
+                        'webp' => $this->imageService->getImageUrl($catalog->bg_image_webp),
+                        'jpg' => $this->imageService->getImageUrl($catalog->bg_image_jpg),
+                    ],
+                    'overlay_opacity' => $catalog->bg_overlay_opacity,
+                ],
+            'social_icons_position' => $catalog->social_icons_position,
             'is_published' => $catalog->is_published,
             'url' => url("/c/{$catalog->username}"),
             'created_at' => $catalog->created_at,
@@ -276,4 +345,3 @@ class ProfileController extends Controller
         ];
     }
 }
-

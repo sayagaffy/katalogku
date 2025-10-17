@@ -66,6 +66,24 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function loginWithPin(whatsapp, pin) {
+    isLoading.value = true
+    error.value = null
+    try {
+      const response = await authService.loginWithPin(whatsapp, pin)
+      if (response.success) {
+        user.value = response.data.user
+        token.value = response.data.token
+      }
+      return response
+    } catch (err) {
+      error.value = err
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   async function logout() {
     isLoading.value = true
     error.value = null
@@ -125,6 +143,20 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function setPin(pin, pin_confirmation) {
+    isLoading.value = true
+    error.value = null
+    try {
+      const response = await authService.setPin(pin, pin_confirmation)
+      return response
+    } catch (err) {
+      error.value = err
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   function clearError() {
     error.value = null
   }
@@ -144,9 +176,11 @@ export const useAuthStore = defineStore('auth', () => {
     sendOTP,
     verifyOTP,
     login,
+    loginWithPin,
     logout,
     fetchUser,
     initializeAuth,
+    setPin,
     clearError,
   }
 })

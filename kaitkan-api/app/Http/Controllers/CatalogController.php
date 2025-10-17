@@ -147,11 +147,18 @@ class CatalogController extends Controller
         try {
             $catalog = Catalog::where('username', $username)
                 ->where('is_published', true)
-                ->with(['products' => function ($query) {
-                    $query->where('in_stock', true)
-                        ->orderBy('sort_order')
-                        ->orderBy('created_at', 'desc');
-                }])
+                ->with([
+                    'products' => function ($query) {
+                        $query->where('in_stock', true)
+                            ->orderBy('sort_order')
+                            ->orderBy('created_at', 'desc');
+                    },
+                    'links' => function ($query) {
+                        $query->where('is_active', true)
+                            ->orderBy('sort_order')
+                            ->orderBy('created_at', 'desc');
+                    },
+                ])
                 ->first();
 
             if (!$catalog) {
@@ -202,6 +209,14 @@ class CatalogController extends Controller
             'category' => $catalog->category,
             'whatsapp' => $catalog->whatsapp,
             'avatar' => $avatar,
+            'background' => [
+                'image' => [
+                    'webp' => $this->imageService->getImageUrl($catalog->bg_image_webp),
+                    'jpg' => $this->imageService->getImageUrl($catalog->bg_image_jpg),
+                ],
+                'overlay_opacity' => $catalog->bg_overlay_opacity,
+            ],
+            'social_icons_position' => $catalog->social_icons_position,
             'theme' => $catalog->theme,
             'is_published' => $catalog->is_published,
             'url' => url("/c/{$catalog->username}"),
@@ -214,6 +229,24 @@ class CatalogController extends Controller
                 return $this->formatProductForCatalog($product);
             });
             $data['products_count'] = $catalog->products->count();
+        }
+
+        if ($catalog->relationLoaded('links')) {
+            $data['links'] = $catalog->links->map(function ($link) {
+                return [
+                    'id' => $link->id,
+                    'title' => $link->title,
+                    'url' => $link->url,
+                    'type' => $link->type,
+                    'icon' => $link->icon,
+                    'is_active' => $link->is_active,
+                    'thumbnail' => [
+                        'webp' => $this->imageService->getImageUrl($link->thumbnail_webp),
+                        'jpg' => $this->imageService->getImageUrl($link->thumbnail_jpg),
+                    ],
+                ];
+            });
+            $data['links_count'] = $catalog->links->count();
         }
 
         return $data;

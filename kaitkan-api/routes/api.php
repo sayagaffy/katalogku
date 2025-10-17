@@ -7,6 +7,7 @@ use App\Http\Controllers\LinkController;
 use App\Http\Controllers\LinkGroupController;
 use App\Http\Controllers\ThemeController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\ClickController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,14 +24,18 @@ use Illuminate\Support\Facades\Route;
 
 // Public authentication endpoints
 Route::prefix('auth')->group(function () {
-    Route::post('/send-otp', [AuthController::class, 'sendOTP']);
-    Route::post('/verify-otp', [AuthController::class, 'verifyOTP']);
+    Route::post('/send-otp', [AuthController::class, 'sendOTP'])->middleware('throttle:3,1');
+    Route::post('/verify-otp', [AuthController::class, 'verifyOTP'])->middleware('throttle:3,1');
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login-pin', [AuthController::class, 'loginWithPin']);
+    Route::post('/reset-pin', [AuthController::class, 'resetPin'])->middleware('throttle:3,1');
 });
 
 // Public catalog endpoints
 Route::get('/c/{username}', [CatalogController::class, 'getPublicCatalog']);
 Route::post('/clicks/{productId}', [ClickController::class, 'trackClick']);
+Route::post('/clicks/link/{id}', [LinkController::class, 'trackClickPublic']);
+Route::post('/analytics/visit', [AnalyticsController::class, 'visit']);
 
 // Protected routes (require authentication)
 Route::middleware('auth:sanctum')->group(function () {
@@ -38,6 +43,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user', [AuthController::class, 'getUser']);
+        Route::post('/set-pin', [AuthController::class, 'setPin']);
+        Route::post('/firebase-token', [AuthController::class, 'firebaseToken']);
     });
 
     // Profile routes (maps to Catalog)
@@ -45,6 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/onboarding', [ProfileController::class, 'onboarding']);
     Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
+    Route::post('/profile/background', [ProfileController::class, 'uploadBackground']);
 
     // Catalog routes
     Route::prefix('catalog')->group(function () {
@@ -84,4 +92,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Analytics routes
     Route::get('/analytics', [ClickController::class, 'getAnalytics']);
+    Route::get('/analytics/summary', [AnalyticsController::class, 'summary']);
+    Route::get('/analytics/top-links', [AnalyticsController::class, 'topLinks']);
+    Route::get('/analytics/top-products', [AnalyticsController::class, 'topProducts']);
+    Route::get('/analytics/export/summary', [AnalyticsController::class, 'exportSummary']);
+    Route::get('/analytics/export/top-links', [AnalyticsController::class, 'exportTopLinks']);
+    Route::get('/analytics/export/top-products', [AnalyticsController::class, 'exportTopProducts']);
 });

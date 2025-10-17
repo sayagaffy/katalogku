@@ -24,14 +24,45 @@ export const API_ENDPOINTS = {
     SEND_OTP: '/auth/send-otp',
     VERIFY_OTP: '/auth/verify-otp',
     LOGIN: '/auth/login',
+    LOGIN_PIN: '/auth/login-pin',
     LOGOUT: '/auth/logout',
     GET_USER: '/auth/user',
+    SET_PIN: '/auth/set-pin',
+    FIREBASE_TOKEN: '/auth/firebase-token',
+  },
+  // Profile (maps to Catalog backend)
+  PROFILE: {
+    SHOW: '/profile',
+    UPDATE: '/profile',
+    AVATAR: '/profile/avatar',
+    ONBOARDING: '/profile/onboarding',
+    BACKGROUND: '/profile/background',
   },
   // Catalog
   CATALOG: {
     GET: '/catalog',
     UPDATE: '/catalog',
     PUBLIC: (username) => `/c/${username}`,
+  },
+  // Links
+  LINKS: {
+    LIST: '/links',
+    CREATE: '/links',
+    UPDATE: (id) => `/links/${id}`,
+    DELETE: (id) => `/links/${id}`,
+    REORDER: '/links/reorder',
+    TRACK_CLICK: (id) => `/clicks/link/${id}`,
+  },
+  // Link Groups
+  LINK_GROUPS: {
+    LIST: '/link-groups',
+    CREATE: '/link-groups',
+    UPDATE: (id) => `/link-groups/${id}`,
+    DELETE: (id) => `/link-groups/${id}`,
+  },
+  // Themes
+  THEMES: {
+    LIST: '/themes',
   },
   // Products
   PRODUCTS: {

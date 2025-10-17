@@ -1,5 +1,11 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900" :class="themeClass">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 relative" :class="themeClass" :style="backgroundStyle">
+    <!-- Background overlay -->
+    <div
+      v-if="hasBackground"
+      class="absolute inset-0 pointer-events-none"
+      :style="{ backgroundColor: `rgba(0,0,0,${overlayOpacity})` }"
+    ></div>
     <!-- Loading State -->
     <div v-if="isLoading" class="flex items-center justify-center min-h-screen">
       <div class="text-center">
@@ -23,7 +29,7 @@
     </div>
 
     <!-- Catalog Content -->
-    <div v-else-if="catalog" class="pb-20">
+    <div v-else-if="catalog" class="pb-20 relative z-10">
       <!-- Header -->
       <div class="bg-white dark:bg-gray-800 shadow-sm">
         <div class="max-w-4xl mx-auto px-4 py-8">
@@ -53,6 +59,39 @@
                 {{ catalog.description }}
               </p>
 
+              <!-- Social Icons Bar (Top) -->
+              <div v-if="socialLinks.length && socialPosition === 'top'" class="flex items-center justify-center md:justify-start gap-3 mb-2">
+                <a
+                  v-for="l in socialLinks"
+                  :key="l.id"
+                  :href="l.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50"
+                  :title="l.title"
+                >
+                  <SocialIcon :name="l.icon || 'link'" :size="18" />
+                </a>
+              </div>
+
+              <!-- Links/Shop Toggle -->
+              <div class="flex items-center justify-center md:justify-start gap-2 mb-4">
+                <button
+                  class="px-4 py-1.5 rounded-full text-sm font-medium"
+                  :class="activeTab==='links' ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'"
+                  @click="activeTab='links'"
+                >
+                  Links
+                </button>
+                <button
+                  class="px-4 py-1.5 rounded-full text-sm font-medium"
+                  :class="activeTab==='shop' ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'"
+                  @click="activeTab='shop'"
+                >
+                  Shop
+                </button>
+              </div>
+
               <!-- WhatsApp Button -->
               <a
                 v-if="catalog.whatsapp"
@@ -71,8 +110,23 @@
         </div>
       </div>
 
+      <!-- Links List (Public) -->
+      <div v-if="activeTab==='links' && publicLinks.length" class="max-w-xl mx-auto px-4 py-8">
+        <ul class="space-y-3">
+          <li v-for="l in publicLinks" :key="l.id">
+            <a
+              href="#"
+              @click.prevent="handlePublicLinkClick(l)"
+              class="block w-full text-center px-6 py-4 rounded-xl font-semibold border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 transition"
+            >
+              {{ l.title }}
+            </a>
+          </li>
+        </ul>
+      </div>
+
       <!-- Products Grid -->
-      <div class="max-w-6xl mx-auto px-4 py-8">
+      <div v-if="activeTab==='shop'" class="max-w-6xl mx-auto px-4 py-8">
         <!-- Search & Filters -->
         <div class="mb-6">
           <div class="flex flex-col sm:flex-row gap-3">
@@ -147,10 +201,30 @@
         </div>
       </div>
 
+      <!-- Social Icons Bar (Bottom) -->
+      <div v-if="socialLinks.length && socialPosition === 'bottom'" class="max-w-xl mx-auto px-4 pb-8">
+        <div class="flex items-center justify-center gap-3">
+          <a
+            v-for="l in socialLinks"
+            :key="l.id"
+            :href="l.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50"
+            :title="l.title"
+          >
+            <SocialIcon :name="l.icon || 'link'" :size="20" />
+          </a>
+        </div>
+      </div>
+
       <!-- Footer -->
-      <div class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-3">
-        <div class="max-w-6xl mx-auto px-4 text-center text-sm text-gray-600 dark:text-gray-400">
-          Dibuat dengan <a :href="siteUrl" class="text-primary-600 dark:text-primary-400 hover:underline font-medium">Kaitkan</a>
+      <div class="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-gray-800/90 backdrop-blur border-t border-gray-200 dark:border-gray-700 py-3">
+        <div class="max-w-6xl mx-auto px-4 text-center text-sm text-gray-600 dark:text-gray-400 flex items-center justify-center gap-2">
+          <span>Dibuat dengan</span>
+          <a :href="siteUrl" class="inline-flex items-center" title="Kaitkan">
+            <img src="/logo.png" alt="Kaitkan" class="h-5 w-auto" />
+          </a>
         </div>
       </div>
     </div>
@@ -158,12 +232,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCatalogStore } from '@/stores/catalog'
 import { productService } from '@/services/product.service'
 import { formatPrice } from '@/utils/helpers'
 import { useWhatsApp } from '@/composables/useWhatsApp'
+import apiClient from '@/services/api.service'
+import { API_ENDPOINTS } from '@/config/api'
+import SocialIcon from '@/components/common/SocialIcon.vue'
 
 // Public site URL for branding links
 const siteUrl = import.meta.env.VITE_PUBLIC_URL || window.location.origin
@@ -176,6 +253,7 @@ const { generateOrderLink, trackClick } = useWhatsApp()
 const catalog = ref(null)
 const isLoading = ref(true)
 const error = ref(null)
+const activeTab = ref('links')
 // search & filter
 const searchQuery = ref('')
 const selectedCategory = ref('')
@@ -194,6 +272,17 @@ const filteredProducts = computed(() => {
   })
 })
 
+// Separate social icon links from regular links for layout
+const socialLinks = computed(() => {
+  const list = catalog.value?.links || []
+  return list.filter((l) => l.type === 'social' && (l.is_active ?? true))
+})
+
+const publicLinks = computed(() => {
+  const list = catalog.value?.links || []
+  return list.filter((l) => l.type !== 'social' && (l.is_active ?? true))
+})
+
 const username = computed(() => route.params.username)
 
 const themeClass = computed(() => {
@@ -201,6 +290,20 @@ const themeClass = computed(() => {
     return ''
   }
   return `theme-${catalog.value.theme}`
+})
+
+const backgroundUrl = computed(() => catalog.value?.background?.image?.webp || catalog.value?.background?.image?.jpg || '')
+const hasBackground = computed(() => !!backgroundUrl.value)
+const overlayOpacity = computed(() => Number(catalog.value?.background?.overlay_opacity || 0))
+const socialPosition = computed(() => (catalog.value?.social_icons_position || 'top'))
+const backgroundStyle = computed(() => {
+  if (!backgroundUrl.value) return {}
+  return {
+    backgroundImage: `url(${backgroundUrl.value})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundAttachment: 'fixed',
+  }
 })
 
 const whatsappUrl = computed(() => {
@@ -214,6 +317,12 @@ async function loadCatalog() {
   try {
     isLoading.value = true
     error.value = null
+    const timer = setTimeout(() => {
+      if (isLoading.value) {
+        isLoading.value = false
+        error.value = 'Tidak dapat terhubung ke server'
+      }
+    }, 10000)
 
     const response = await catalogStore.getPublicCatalog(username.value)
     if (response.success) {
@@ -224,6 +333,8 @@ async function loadCatalog() {
     console.error('Error loading catalog:', err)
   } finally {
     isLoading.value = false
+    // clear timeout guard if set
+    try { clearTimeout(timer) } catch {}
   }
 }
 
@@ -252,9 +363,44 @@ function openProductDetail(product) {
   })
 }
 
+async function handlePublicLinkClick(link) {
+  try {
+    // track click but do not block navigation
+    apiClient.post(API_ENDPOINTS.LINKS.TRACK_CLICK(link.id)).catch(() => {})
+  } finally {
+    window.open(link.url, '_blank')
+  }
+}
+
 onMounted(() => {
   loadCatalog()
 })
+
+// Record page view once per 30 minutes per catalog
+watch(
+  () => catalog.value?.id,
+  async (id) => {
+    if (!id) return
+    const key = `pv:${id}`
+    const now = Date.now()
+    try {
+      const last = parseInt(localStorage.getItem(key) || '0', 10)
+      if (!last || now - last > 30 * 60 * 1000) {
+        const params = new URLSearchParams(window.location.search)
+        const utm = {
+          utm_source: params.get('utm_source') || undefined,
+          utm_medium: params.get('utm_medium') || undefined,
+          utm_campaign: params.get('utm_campaign') || undefined,
+        }
+        try {
+          const mod = await import('@/services/analytics.service')
+          mod.analyticsService.visit(id, utm)
+        } catch {}
+        localStorage.setItem(key, String(now))
+      }
+    } catch {}
+  }
+)
 </script>
 
 <style scoped>
